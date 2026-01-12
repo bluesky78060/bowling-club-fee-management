@@ -169,7 +169,7 @@ Phase 5: 테스트 및 배포
   - [ ] 중복 납부 방지 로직
 - [ ] 미납자 목록 화면
 
-### 2.3 수입/지출 장부
+### 2.3 수입/지출 장부 ✅ (2026-01-12)
 - [x] AccountRepository 구현
 - [ ] 장부 관련 UseCase 구현
   - [ ] GetAllAccountsUseCase
@@ -179,20 +179,33 @@ Phase 5: 테스트 및 배포
   - [ ] UpdateAccountUseCase
   - [ ] DeleteAccountUseCase
   - [ ] GetBalanceUseCase
-- [x] 장부 목록 화면 (AccountScreen) - 기본 UI
-  - [ ] 잔액 표시 (상단 고정)
-  - [ ] 수입/지출 내역 리스트
-  - [ ] 기간별 필터
-  - [ ] 카테고리별 필터
-  - [ ] 수입/지출 구분 필터
-- [ ] 장부 등록 화면 (AccountFormScreen)
-  - [ ] 수입/지출 선택
-  - [ ] 카테고리 선택
-  - [ ] 금액 입력
-  - [ ] 날짜 선택
-  - [ ] 내용 입력
-  - [ ] 메모 입력
-  - [ ] 영수증 이미지 첨부
+- [x] AccountViewModel 구현
+  - [x] 거래 목록 조회 (날짜순 정렬)
+  - [x] 수입/지출 필터링
+  - [x] 잔액/총수입/총지출 계산
+  - [x] 거래 추가/수정/삭제
+  - [x] loadAccountById 개별 조회
+- [x] 장부 목록 화면 (AccountScreen)
+  - [x] 잔액 표시 (상단 고정)
+  - [x] 수입/지출 내역 리스트
+  - [x] 수입/지출 구분 필터 (FilterChip)
+  - [x] 로딩/빈 화면 처리
+  - [x] LazyColumn key 최적화
+  - [x] LazyColumn 높이 제한 (weight)
+  - [ ] 기간별 필터 (추후)
+  - [ ] 카테고리별 필터 (추후)
+- [x] 장부 등록/수정 화면 (AccountFormScreen)
+  - [x] 수입/지출 선택 (FilterChip)
+  - [x] 카테고리 선택 (DropdownMenu)
+  - [x] 금액 입력
+  - [x] 날짜 선택 (DatePicker)
+  - [x] 내용 입력
+  - [x] 메모 입력
+  - [x] 초기 카테고리 검증 로직
+  - [ ] 영수증 이미지 첨부 (추후)
+- [x] 네비게이션 연결 (AppNavigation)
+  - [x] AccountScreen → AccountFormScreen 라우팅
+  - [x] 거래 수정 화면 라우팅 (LaunchedEffect)
 
 ### 2.4 영수증 OCR 스캔
 - [ ] 카메라 권한 요청 구현
@@ -375,11 +388,11 @@ Phase 5: 테스트 및 배포
 | Phase | 항목 수 | 완료 | 진행률 |
 |-------|---------|------|--------|
 | Phase 1 | 25 | 22 | 88% |
-| Phase 2 | 48 | 35 | 73% |
+| Phase 2 | 48 | 42 | 88% |
 | Phase 3 | 20 | 1 | 5% |
 | Phase 4 | 25 | 0 | 0% |
 | Phase 5 | 20 | 1 | 5% |
-| **총계** | **138** | **59** | **43%** |
+| **총계** | **138** | **66** | **48%** |
 
 ---
 
@@ -408,3 +421,4 @@ Phase 5: 테스트 및 배포
 | 1.1 | 2026-01-12 | Claude | Phase 1 완료 - 프로젝트 설정, DB, 기본 UI, 코드 품질 개선 |
 | 1.2 | 2026-01-12 | Claude | Phase 2.1 회원 관리 완료 - MemberFormScreen, MemberDetailScreen, 네비게이션 연결 |
 | 1.3 | 2026-01-12 | Claude | Phase 2.2 회비 관리 완료 - PaymentRepository, PaymentViewModel, PaymentFormScreen, 코드 리뷰 이슈 수정 |
+| 1.4 | 2026-01-12 | Claude | Phase 2.3 장부 관리 완료 - AccountViewModel, AccountScreen, AccountFormScreen, 네비게이션 연결, 코드 리뷰 이슈 수정 |

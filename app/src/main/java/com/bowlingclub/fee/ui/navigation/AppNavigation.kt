@@ -44,7 +44,9 @@ import com.bowlingclub.fee.ui.screens.member.MemberViewModel
 import com.bowlingclub.fee.ui.screens.payment.PaymentFormScreen
 import com.bowlingclub.fee.ui.screens.payment.PaymentScreen
 import com.bowlingclub.fee.ui.screens.payment.PaymentViewModel
+import com.bowlingclub.fee.ui.screens.account.AccountFormScreen
 import com.bowlingclub.fee.ui.screens.account.AccountScreen
+import com.bowlingclub.fee.ui.screens.account.AccountViewModel
 import com.bowlingclub.fee.ui.screens.score.ScoreScreen
 import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
@@ -97,9 +99,12 @@ object Screen {
     const val MEMBER_EDIT = "member/edit/{memberId}"
     const val MEMBER_DETAIL = "member/detail/{memberId}"
     const val PAYMENT_ADD = "payment/add"
+    const val ACCOUNT_ADD = "account/add"
+    const val ACCOUNT_EDIT = "account/edit/{accountId}"
 
     fun memberEdit(memberId: Long) = "member/edit/$memberId"
     fun memberDetail(memberId: Long) = "member/detail/$memberId"
+    fun accountEdit(accountId: Long) = "account/edit/$accountId"
 }
 
 val bottomNavItems = listOf(
@@ -280,7 +285,54 @@ fun AppNavigation() {
             }
 
             composable(BottomNavItem.Account.route) {
-                AccountScreen()
+                val viewModel: AccountViewModel = hiltViewModel()
+                AccountScreen(
+                    viewModel = viewModel,
+                    onAddAccount = { navController.navigate(Screen.ACCOUNT_ADD) },
+                    onAccountClick = { account -> navController.navigate(Screen.accountEdit(account.id)) }
+                )
+            }
+
+            composable(Screen.ACCOUNT_ADD) {
+                val parentEntry = navController.getBackStackEntry(BottomNavItem.Account.route)
+                val viewModel: AccountViewModel = hiltViewModel(parentEntry)
+                AccountFormScreen(
+                    account = null,
+                    onSave = { account ->
+                        viewModel.addAccount(account)
+                        navController.popBackStack()
+                    },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Screen.ACCOUNT_EDIT,
+                arguments = listOf(navArgument("accountId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val accountId = backStackEntry.arguments?.getLong("accountId") ?: return@composable
+                val parentEntry = navController.getBackStackEntry(BottomNavItem.Account.route)
+                val viewModel: AccountViewModel = hiltViewModel(parentEntry)
+                val uiState by viewModel.uiState.collectAsState()
+
+                // Load account from repository if not in current list
+                LaunchedEffect(accountId) {
+                    viewModel.loadAccountById(accountId)
+                }
+
+                // Try to find in current list first, then fall back to selectedAccount
+                val account = uiState.accounts.find { it.id == accountId } ?: uiState.selectedAccount
+
+                if (account != null) {
+                    AccountFormScreen(
+                        account = account,
+                        onSave = { updatedAccount ->
+                            viewModel.updateAccount(updatedAccount)
+                            navController.popBackStack()
+                        },
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
             composable(BottomNavItem.Score.route) {
                 ScoreScreen()

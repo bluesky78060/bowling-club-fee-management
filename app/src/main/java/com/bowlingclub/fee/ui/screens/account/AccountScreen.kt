@@ -1,6 +1,7 @@
 package com.bowlingclub.fee.ui.screens.account
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,9 +16,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
@@ -27,59 +28,43 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.bowlingclub.fee.domain.model.Account
+import com.bowlingclub.fee.domain.model.AccountType
 import com.bowlingclub.fee.ui.components.AppCard
 import com.bowlingclub.fee.ui.components.formatAmount
 import com.bowlingclub.fee.ui.theme.BackgroundSecondary
 import com.bowlingclub.fee.ui.theme.Danger
 import com.bowlingclub.fee.ui.theme.DangerLight
 import com.bowlingclub.fee.ui.theme.Gray200
+import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
 import com.bowlingclub.fee.ui.theme.Success
 import com.bowlingclub.fee.ui.theme.SuccessLight
-
-data class TransactionData(
-    val type: String,
-    val category: String,
-    val description: String,
-    val amount: Int,
-    val date: String,
-    val isIncome: Boolean
-)
+import java.time.format.DateTimeFormatter
 
 @Composable
-fun AccountScreen() {
-    var selectedFilter by remember { mutableStateOf("전체") }
-
-    // Sample data
-    val transactions = listOf(
-        TransactionData("회비", "수입", "김철수 외 11명 회비", 120000, "1/12", true),
-        TransactionData("레인비", "지출", "레인비 (5레인)", 85000, "1/12", false),
-        TransactionData("식비", "지출", "회식비 (12명)", 120000, "1/12", false),
-        TransactionData("회비", "수입", "박민수 외 14명 회비", 150000, "1/5", true),
-        TransactionData("레인비", "지출", "레인비 (4레인)", 68000, "1/5", false)
-    )
-
-    val filteredTransactions = when (selectedFilter) {
-        "수입" -> transactions.filter { it.isIncome }
-        "지출" -> transactions.filter { !it.isIncome }
-        else -> transactions
-    }
+fun AccountScreen(
+    viewModel: AccountViewModel = hiltViewModel(),
+    onAddAccount: () -> Unit = {},
+    onAccountClick: (Account) -> Unit = {}
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val dateFormatter = DateTimeFormatter.ofPattern("M/d")
 
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* TODO: Add transaction */ },
+                onClick = onAddAccount,
                 containerColor = Primary,
                 contentColor = Color.White
             ) {
@@ -105,9 +90,9 @@ fun AccountScreen() {
 
             // Balance Card
             BalanceSummaryCard(
-                balance = 1250000,
-                totalIncome = 270000,
-                totalExpense = 273000
+                balance = uiState.balance,
+                totalIncome = uiState.totalIncome,
+                totalExpense = uiState.totalExpense
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -116,11 +101,11 @@ fun AccountScreen() {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf("전체", "수입", "지출").forEach { filter ->
+                AccountFilter.entries.forEach { filter ->
                     FilterChip(
-                        selected = selectedFilter == filter,
-                        onClick = { selectedFilter = filter },
-                        label = { Text(filter) },
+                        selected = uiState.selectedFilter == filter,
+                        onClick = { viewModel.setFilter(filter) },
+                        label = { Text(filter.displayName) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = Primary,
                             selectedLabelColor = Color.White
@@ -132,12 +117,48 @@ fun AccountScreen() {
             Spacer(modifier = Modifier.height(16.dp))
 
             // Transaction List
-            AppCard {
-                LazyColumn {
-                    items(filteredTransactions) { transaction ->
-                        TransactionListItem(transaction = transaction)
-                        if (transaction != filteredTransactions.last()) {
-                            HorizontalDivider(color = Gray200)
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Primary)
+                }
+            } else if (uiState.filteredAccounts.isEmpty()) {
+                AppCard {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = when (uiState.selectedFilter) {
+                                AccountFilter.ALL -> "등록된 거래가 없습니다"
+                                AccountFilter.INCOME -> "등록된 수입이 없습니다"
+                                AccountFilter.EXPENSE -> "등록된 지출이 없습니다"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Gray400
+                        )
+                    }
+                }
+            } else {
+                AppCard(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    LazyColumn {
+                        items(uiState.filteredAccounts, key = { it.id }) { account ->
+                            TransactionListItem(
+                                account = account,
+                                dateFormatter = dateFormatter,
+                                onClick = { onAccountClick(account) }
+                            )
+                            if (account != uiState.filteredAccounts.last()) {
+                                HorizontalDivider(color = Gray200)
+                            }
                         }
                     }
                 }
@@ -210,10 +231,17 @@ private fun BalanceSummaryCard(
 }
 
 @Composable
-private fun TransactionListItem(transaction: TransactionData) {
+private fun TransactionListItem(
+    account: Account,
+    dateFormatter: DateTimeFormatter,
+    onClick: () -> Unit
+) {
+    val isIncome = account.type == AccountType.INCOME
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick() }
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -221,44 +249,46 @@ private fun TransactionListItem(transaction: TransactionData) {
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(if (transaction.isIncome) SuccessLight else DangerLight),
+                .background(if (isIncome) SuccessLight else DangerLight),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = getTransactionIcon(transaction.type),
+                text = getTransactionIcon(account.category),
                 style = MaterialTheme.typography.bodyLarge
             )
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = transaction.description,
+                text = account.description,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = "${transaction.date} · ${transaction.type}",
+                text = "${account.date.format(dateFormatter)} · ${account.category}",
                 style = MaterialTheme.typography.bodySmall,
                 color = Gray500
             )
         }
         Text(
-            text = if (transaction.isIncome) "+${formatAmount(transaction.amount)}" else "-${formatAmount(transaction.amount)}",
+            text = if (isIncome) "+${formatAmount(account.amount)}" else "-${formatAmount(account.amount)}",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = if (transaction.isIncome) Success else Danger
+            color = if (isIncome) Success else Danger
         )
     }
 }
 
-private fun getTransactionIcon(type: String): String {
-    return when (type) {
+private fun getTransactionIcon(category: String): String {
+    return when (category) {
         "회비" -> "💰"
         "정산금" -> "💵"
         "찬조금" -> "🎁"
+        "특별징수" -> "📋"
         "레인비" -> "🎳"
         "식비" -> "🍽️"
         "경품비" -> "🏆"
+        "용품비" -> "🛒"
         else -> "📝"
     }
 }
