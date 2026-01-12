@@ -41,6 +41,7 @@ import com.bowlingclub.fee.domain.model.Account
 import com.bowlingclub.fee.domain.model.AccountType
 import com.bowlingclub.fee.ui.components.AppCard
 import com.bowlingclub.fee.ui.components.formatAmount
+import com.bowlingclub.fee.ui.components.getTransactionIcon
 import com.bowlingclub.fee.ui.theme.BackgroundSecondary
 import com.bowlingclub.fee.ui.theme.Danger
 import com.bowlingclub.fee.ui.theme.DangerLight
@@ -279,16 +280,3 @@ private fun TransactionListItem(
     }
 }
 
-private fun getTransactionIcon(category: String): String {
-    return when (category) {
-        "회비" -> "💰"
-        "정산금" -> "💵"
-        "찬조금" -> "🎁"
-        "특별징수" -> "📋"
-        "레인비" -> "🎳"
-        "식비" -> "🍽️"
-        "경품비" -> "🏆"
-        "용품비" -> "🛒"
-        else -> "📝"
-    }
-}

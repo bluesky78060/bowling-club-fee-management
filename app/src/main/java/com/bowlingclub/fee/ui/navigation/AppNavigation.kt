@@ -176,7 +176,28 @@ fun AppNavigation() {
             modifier = Modifier.padding(paddingValues)
         ) {
             composable(BottomNavItem.Home.route) {
-                HomeScreen()
+                HomeScreen(
+                    onNavigateToPayment = { navController.navigate(Screen.PAYMENT_ADD) },
+                    onNavigateToAccountAdd = { navController.navigate(Screen.ACCOUNT_ADD) },
+                    onNavigateToAccount = {
+                        navController.navigate(BottomNavItem.Account.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToScore = {
+                        navController.navigate(BottomNavItem.Score.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
             }
 
             composable(BottomNavItem.Member.route) {
@@ -268,8 +289,8 @@ fun AppNavigation() {
             }
 
             composable(Screen.PAYMENT_ADD) {
-                val paymentParentEntry = navController.getBackStackEntry(BottomNavItem.Payment.route)
-                val paymentViewModel: PaymentViewModel = hiltViewModel(paymentParentEntry)
+                // Use independent ViewModel to support navigation from Home screen
+                val paymentViewModel: PaymentViewModel = hiltViewModel()
                 val memberViewModel: MemberViewModel = hiltViewModel()
                 val memberUiState by memberViewModel.uiState.collectAsState()
 
@@ -294,8 +315,8 @@ fun AppNavigation() {
             }
 
             composable(Screen.ACCOUNT_ADD) {
-                val parentEntry = navController.getBackStackEntry(BottomNavItem.Account.route)
-                val viewModel: AccountViewModel = hiltViewModel(parentEntry)
+                // Use independent ViewModel to support navigation from Home screen
+                val viewModel: AccountViewModel = hiltViewModel()
                 AccountFormScreen(
                     account = null,
                     onSave = { account ->

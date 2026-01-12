@@ -82,7 +82,8 @@ fun AppCard(
 fun SectionTitle(
     title: String,
     modifier: Modifier = Modifier,
-    action: @Composable (() -> Unit)? = null
+    action: @Composable (() -> Unit)? = null,
+    onActionClick: (() -> Unit)? = null
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -95,7 +96,13 @@ fun SectionTitle(
             fontWeight = FontWeight.SemiBold,
             color = Gray600
         )
-        action?.invoke()
+        if (action != null && onActionClick != null) {
+            Box(modifier = Modifier.clickable { onActionClick() }) {
+                action()
+            }
+        } else {
+            action?.invoke()
+        }
     }
 }
 
@@ -277,4 +284,19 @@ fun TransactionItem(
 fun formatAmount(amount: Int): String {
     val absAmount = kotlin.math.abs(amount)
     return "%,d원".format(absAmount)
+}
+
+fun getTransactionIcon(category: String): String {
+    return when (category) {
+        "회비" -> "💰"
+        "정산금" -> "💵"
+        "찬조금" -> "🎁"
+        "특별징수" -> "📋"
+        "게임비" -> "🎳"
+        "식비" -> "🍽️"
+        "경품비" -> "🏆"
+        "용품비" -> "🛒"
+        "기타수입", "기타지출" -> "📝"
+        else -> "📝"
+    }
 }

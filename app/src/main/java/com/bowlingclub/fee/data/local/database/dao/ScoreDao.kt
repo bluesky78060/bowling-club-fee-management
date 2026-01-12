@@ -87,4 +87,21 @@ interface ScoreDao {
 
     @Query("DELETE FROM scores WHERE meeting_id = :meetingId AND member_id = :memberId")
     suspend fun deleteByMeetingAndMember(meetingId: Long, memberId: Long)
+
+    @Query("""
+        SELECT s.member_id, m.name, AVG(s.score) as average
+        FROM scores s
+        INNER JOIN members m ON s.member_id = m.id
+        WHERE m.status = 'active'
+        GROUP BY s.member_id
+        ORDER BY average DESC
+        LIMIT :limit
+    """)
+    suspend fun getTopAverageRankings(limit: Int): List<MemberAverageRanking>
 }
+
+data class MemberAverageRanking(
+    val member_id: Long,
+    val name: String,
+    val average: Double
+)

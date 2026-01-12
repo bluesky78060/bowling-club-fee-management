@@ -37,7 +37,7 @@ object IncomeCategory {
 }
 
 object ExpenseCategory {
-    const val LANE_FEE = "레인비"
+    const val LANE_FEE = "게임비"
     const val FOOD = "식비"
     const val PRIZE = "경품비"
     const val SUPPLIES = "용품비"

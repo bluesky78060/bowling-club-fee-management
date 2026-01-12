@@ -86,8 +86,18 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun loadTopRankings(): List<RankingData> {
-        // TODO: Implement when score repository has ranking functionality
-        return emptyList()
+        val result = scoreRepository.getTopAverageRankings(3)
+        return if (result.isSuccess) {
+            result.getOrNull()?.mapIndexed { index, ranking ->
+                RankingData(
+                    rank = index + 1,
+                    name = ranking.name,
+                    average = ranking.average
+                )
+            } ?: emptyList()
+        } else {
+            emptyList()
+        }
     }
 
     fun refresh() {

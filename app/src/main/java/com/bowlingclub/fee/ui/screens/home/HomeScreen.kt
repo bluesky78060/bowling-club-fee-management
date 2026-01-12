@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,6 +33,7 @@ import com.bowlingclub.fee.ui.components.RankingItem
 import com.bowlingclub.fee.ui.components.SectionTitle
 import com.bowlingclub.fee.ui.components.TransactionItem
 import com.bowlingclub.fee.ui.components.formatAmount
+import com.bowlingclub.fee.ui.components.getTransactionIcon
 import com.bowlingclub.fee.ui.theme.BackgroundSecondary
 import com.bowlingclub.fee.ui.theme.Danger
 import com.bowlingclub.fee.ui.theme.Gray200
@@ -44,7 +44,11 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
+    onNavigateToPayment: () -> Unit = {},
+    onNavigateToAccountAdd: () -> Unit = {},
+    onNavigateToAccount: () -> Unit = {},
+    onNavigateToScore: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -82,7 +86,10 @@ fun HomeScreen(
         // Quick Actions
         SectionTitle(title = "빠른 메뉴")
         Spacer(modifier = Modifier.height(12.dp))
-        QuickActionsGrid()
+        QuickActionsGrid(
+            onPaymentClick = onNavigateToPayment,
+            onExpenseClick = onNavigateToAccountAdd
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -95,10 +102,11 @@ fun HomeScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = Primary
                 )
-            }
+            },
+            onActionClick = onNavigateToScore
         )
         Spacer(modifier = Modifier.height(12.dp))
-        RankingCard()
+        RankingCard(rankings = uiState.topRankings)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -111,7 +119,8 @@ fun HomeScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = Primary
                 )
-            }
+            },
+            onActionClick = onNavigateToAccount
         )
         Spacer(modifier = Modifier.height(12.dp))
         RecentTransactionsCard(transactions = uiState.recentTransactions)
@@ -184,7 +193,10 @@ private fun BalanceCard(
 }
 
 @Composable
-private fun QuickActionsGrid() {
+private fun QuickActionsGrid(
+    onPaymentClick: () -> Unit,
+    onExpenseClick: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -198,13 +210,13 @@ private fun QuickActionsGrid() {
         QuickActionButton(
             icon = "💰",
             label = "납부 등록",
-            onClick = { },
+            onClick = onPaymentClick,
             modifier = Modifier.weight(1f)
         )
         QuickActionButton(
             icon = "📝",
             label = "지출 등록",
-            onClick = { },
+            onClick = onExpenseClick,
             modifier = Modifier.weight(1f)
         )
         QuickActionButton(
@@ -217,15 +229,34 @@ private fun QuickActionsGrid() {
 }
 
 @Composable
-private fun RankingCard() {
+private fun RankingCard(rankings: List<RankingData>) {
     AppCard {
-        Column {
-            // Sample data - would come from ViewModel
-            RankingItem(rank = 1, name = "박민수", score = "193.3")
-            HorizontalDivider(color = Gray200)
-            RankingItem(rank = 2, name = "김철수", score = "178.3")
-            HorizontalDivider(color = Gray200)
-            RankingItem(rank = 3, name = "이영희", score = "153.3")
+        if (rankings.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "등록된 점수가 없습니다",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Gray500
+                )
+            }
+        } else {
+            Column {
+                rankings.forEachIndexed { index, ranking ->
+                    RankingItem(
+                        rank = ranking.rank,
+                        name = ranking.name,
+                        score = String.format("%.1f", ranking.average)
+                    )
+                    if (index < rankings.lastIndex) {
+                        HorizontalDivider(color = Gray200)
+                    }
+                }
+            }
         }
     }
 }
@@ -266,14 +297,3 @@ private fun RecentTransactionsCard(
     }
 }
 
-private fun getTransactionIcon(category: String): String {
-    return when (category) {
-        "회비" -> "💰"
-        "정산금" -> "💵"
-        "찬조금" -> "🎁"
-        "레인비" -> "🎳"
-        "식비" -> "🍽️"
-        "경품비" -> "🏆"
-        else -> "📝"
-    }
-}

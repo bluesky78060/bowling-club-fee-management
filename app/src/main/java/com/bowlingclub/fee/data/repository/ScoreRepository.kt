@@ -1,6 +1,7 @@
 package com.bowlingclub.fee.data.repository
 
 import com.bowlingclub.fee.data.local.database.dao.MeetingDao
+import com.bowlingclub.fee.data.local.database.dao.MemberAverageRanking
 import com.bowlingclub.fee.data.local.database.dao.ScoreDao
 import com.bowlingclub.fee.data.local.database.entity.MeetingEntity
 import com.bowlingclub.fee.data.local.database.entity.ScoreEntity
@@ -95,4 +96,7 @@ class ScoreRepository @Inject constructor(
 
     suspend fun deleteScoresByMeetingAndMember(meetingId: Long, memberId: Long): Result<Unit> =
         Result.runCatching { scoreDao.deleteByMeetingAndMember(meetingId, memberId) }
+
+    suspend fun getTopAverageRankings(limit: Int = 3): Result<List<MemberAverageRanking>> =
+        Result.runCatching { scoreDao.getTopAverageRankings(limit) }
 }
