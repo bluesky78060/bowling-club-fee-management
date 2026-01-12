@@ -1,6 +1,7 @@
 package com.bowlingclub.fee.data.repository
 
 import com.bowlingclub.fee.data.local.database.dao.MeetingDao
+import com.bowlingclub.fee.data.local.database.dao.MeetingWithStatsEntity
 import com.bowlingclub.fee.data.local.database.dao.MemberAverageRanking
 import com.bowlingclub.fee.data.local.database.dao.ScoreDao
 import com.bowlingclub.fee.data.local.database.entity.MeetingEntity
@@ -11,9 +12,18 @@ import com.bowlingclub.fee.domain.model.Score
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+
+data class MeetingWithStats(
+    val meeting: Meeting,
+    val participantCount: Int,
+    val gameCount: Int
+)
 
 @Singleton
 class ScoreRepository @Inject constructor(
@@ -24,6 +34,28 @@ class ScoreRepository @Inject constructor(
     fun getAllMeetings(): Flow<List<Meeting>> =
         meetingDao.getAllMeetings()
             .map { entities -> entities.map { it.toDomain() } }
+            .catch { emit(emptyList()) }
+
+    fun getAllMeetingsWithStats(): Flow<List<MeetingWithStats>> =
+        meetingDao.getAllMeetingsWithStats()
+            .map { entities ->
+                entities.map { entity ->
+                    MeetingWithStats(
+                        meeting = Meeting(
+                            id = entity.id,
+                            date = LocalDate.ofEpochDay(entity.date),
+                            location = entity.location,
+                            memo = entity.memo,
+                            createdAt = LocalDateTime.ofInstant(
+                                Instant.ofEpochMilli(entity.created_at),
+                                ZoneId.systemDefault()
+                            )
+                        ),
+                        participantCount = entity.participant_count,
+                        gameCount = entity.game_count
+                    )
+                }
+            }
             .catch { emit(emptyList()) }
 
     fun getRecentMeetings(limit: Int = 5): Flow<List<Meeting>> =

@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bowlingclub.fee.data.repository.MeetingWithStats
 import com.bowlingclub.fee.domain.model.Meeting
 import com.bowlingclub.fee.ui.components.AppCard
 import com.bowlingclub.fee.ui.theme.BackgroundSecondary

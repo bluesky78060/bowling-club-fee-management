@@ -16,6 +16,17 @@ interface MeetingDao {
     @Query("SELECT * FROM meetings ORDER BY date DESC")
     fun getAllMeetings(): Flow<List<MeetingEntity>>
 
+    @Query("""
+        SELECT m.id, m.date, m.location, m.memo, m.created_at,
+               COUNT(DISTINCT s.member_id) as participant_count,
+               COUNT(s.id) as game_count
+        FROM meetings m
+        LEFT JOIN scores s ON m.id = s.meeting_id
+        GROUP BY m.id
+        ORDER BY m.date DESC
+    """)
+    fun getAllMeetingsWithStats(): Flow<List<MeetingWithStatsEntity>>
+
     @Query("SELECT * FROM meetings WHERE id = :id")
     suspend fun getMeetingById(id: Long): MeetingEntity?
 
@@ -34,6 +45,16 @@ interface MeetingDao {
     @Delete
     suspend fun delete(meeting: MeetingEntity)
 }
+
+data class MeetingWithStatsEntity(
+    val id: Long,
+    val date: Long,
+    val location: String,
+    val memo: String,
+    val created_at: Long,
+    val participant_count: Int,
+    val game_count: Int
+)
 
 @Dao
 interface ScoreDao {

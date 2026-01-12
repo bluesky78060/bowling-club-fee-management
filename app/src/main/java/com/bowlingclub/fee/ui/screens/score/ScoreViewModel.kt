@@ -2,7 +2,7 @@ package com.bowlingclub.fee.ui.screens.score
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bowlingclub.fee.data.local.database.dao.MemberAverageRanking
+import com.bowlingclub.fee.data.repository.MeetingWithStats
 import com.bowlingclub.fee.data.repository.MemberRepository
 import com.bowlingclub.fee.data.repository.ScoreRepository
 import com.bowlingclub.fee.domain.model.Meeting
@@ -15,17 +15,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
-
-data class MeetingWithStats(
-    val meeting: Meeting,
-    val participantCount: Int,
-    val gameCount: Int
-)
 
 data class RankingData(
     val rank: Int,
@@ -55,6 +48,7 @@ class ScoreViewModel @Inject constructor(
     val uiState: StateFlow<ScoreUiState> = _uiState.asStateFlow()
 
     private var dataJob: Job? = null
+    private var meetingScoresJob: Job? = null
 
     init {
         loadData()
@@ -68,21 +62,11 @@ class ScoreViewModel @Inject constructor(
             // Load rankings
             val rankings = loadRankings()
 
-            // Combine meetings with scores to calculate stats
+            // Combine meetings with stats and active members in a single query
             combine(
-                scoreRepository.getAllMeetings(),
+                scoreRepository.getAllMeetingsWithStats(),
                 memberRepository.getMembersByStatus(MemberStatus.ACTIVE)
-            ) { meetings, members ->
-                val meetingsWithStats = meetings.map { meeting ->
-                    // Calculate stats for each meeting
-                    val stats = calculateMeetingStats(meeting.id)
-                    MeetingWithStats(
-                        meeting = meeting,
-                        participantCount = stats.first,
-                        gameCount = stats.second
-                    )
-                }
-
+            ) { meetingsWithStats, members ->
                 ScoreUiState(
                     meetings = meetingsWithStats,
                     rankings = rankings,
@@ -93,13 +77,6 @@ class ScoreViewModel @Inject constructor(
                 _uiState.update { state }
             }
         }
-    }
-
-    private suspend fun calculateMeetingStats(meetingId: Long): Pair<Int, Int> {
-        val scores = scoreRepository.getScoresByMeetingId(meetingId).first()
-        val participantCount = scores.map { it.memberId }.distinct().size
-        val gameCount = scores.size
-        return Pair(participantCount, gameCount)
     }
 
     private suspend fun loadRankings(): List<RankingData> {
@@ -142,7 +119,9 @@ class ScoreViewModel @Inject constructor(
     }
 
     fun selectMeeting(meeting: Meeting) {
-        viewModelScope.launch {
+        // Cancel previous meeting scores collection to prevent memory leak
+        meetingScoresJob?.cancel()
+        meetingScoresJob = viewModelScope.launch {
             _uiState.update { it.copy(selectedMeeting = meeting) }
             scoreRepository.getScoresByMeetingId(meeting.id).collect { scores ->
                 _uiState.update { it.copy(meetingScores = scores) }
@@ -203,5 +182,6 @@ class ScoreViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         dataJob?.cancel()
+        meetingScoresJob?.cancel()
     }
 }

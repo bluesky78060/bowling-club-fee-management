@@ -5,12 +5,14 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.bowlingclub.fee.domain.model.Meeting
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 @Entity(
     tableName = "meetings",
-    indices = [Index(value = ["date"], unique = true)]
+    indices = [Index(value = ["date"])]
 )
 data class MeetingEntity(
     @PrimaryKey(autoGenerate = true)
@@ -30,16 +32,23 @@ data class MeetingEntity(
         date = LocalDate.ofEpochDay(date),
         location = location,
         memo = memo,
-        createdAt = LocalDateTime.now()
+        createdAt = LocalDateTime.ofInstant(
+            Instant.ofEpochMilli(createdAt),
+            ZoneId.systemDefault()
+        )
     )
 
     companion object {
-        fun fromDomain(meeting: Meeting): MeetingEntity = MeetingEntity(
+        fun fromDomain(meeting: Meeting, preserveCreatedAt: Boolean = false): MeetingEntity = MeetingEntity(
             id = meeting.id,
             date = meeting.date.toEpochDay(),
             location = meeting.location,
             memo = meeting.memo,
-            createdAt = System.currentTimeMillis()
+            createdAt = if (preserveCreatedAt) {
+                meeting.createdAt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            } else {
+                System.currentTimeMillis()
+            }
         )
     }
 }
