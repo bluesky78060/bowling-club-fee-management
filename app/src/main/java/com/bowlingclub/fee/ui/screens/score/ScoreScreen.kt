@@ -1,0 +1,321 @@
+package com.bowlingclub.fee.ui.screens.score
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.bowlingclub.fee.ui.components.AppCard
+import com.bowlingclub.fee.ui.theme.BackgroundSecondary
+import com.bowlingclub.fee.ui.theme.Gray200
+import com.bowlingclub.fee.ui.theme.Gray400
+import com.bowlingclub.fee.ui.theme.Gray500
+import com.bowlingclub.fee.ui.theme.Primary
+import com.bowlingclub.fee.ui.theme.Warning
+
+data class MeetingData(
+    val date: String,
+    val location: String,
+    val participantCount: Int,
+    val gameCount: Int
+)
+
+data class RankingData(
+    val rank: Int,
+    val name: String,
+    val average: Double,
+    val change: Int // +1, -1, 0
+)
+
+@Composable
+fun ScoreScreen() {
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val tabs = listOf("모임 기록", "랭킹", "팀전")
+
+    // Sample data
+    val meetings = listOf(
+        MeetingData("1/12", "행복볼링장", 12, 36),
+        MeetingData("1/5", "행복볼링장", 15, 45),
+        MeetingData("12/29", "행복볼링장", 10, 30)
+    )
+
+    val rankings = listOf(
+        RankingData(1, "박민수", 193.3, 2),
+        RankingData(2, "김철수", 178.3, 0),
+        RankingData(3, "이영희", 168.5, -1),
+        RankingData(4, "최지훈", 165.2, 1),
+        RankingData(5, "정수민", 162.8, -2),
+        RankingData(6, "한지원", 158.4, 0),
+        RankingData(7, "오승환", 155.1, 0),
+        RankingData(8, "강민정", 152.3, 1)
+    )
+
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { /* TODO: Add score */ },
+                containerColor = Primary,
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "점수 입력")
+            }
+        },
+        containerColor = BackgroundSecondary
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Header
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "점수 관리",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // Tab Row
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = Color.White,
+                contentColor = Primary,
+                indicator = { tabPositions ->
+                    SecondaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                        color = Primary
+                    )
+                }
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        text = {
+                            Text(
+                                text = title,
+                                fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                        },
+                        selectedContentColor = Primary,
+                        unselectedContentColor = Gray500
+                    )
+                }
+            }
+
+            // Content
+            Column(modifier = Modifier.padding(16.dp)) {
+                when (selectedTab) {
+                    0 -> MeetingListContent(meetings = meetings)
+                    1 -> RankingListContent(rankings = rankings)
+                    2 -> TeamMatchContent()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MeetingListContent(meetings: List<MeetingData>) {
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(meetings) { meeting ->
+            MeetingCard(meeting = meeting)
+        }
+    }
+}
+
+@Composable
+private fun MeetingCard(meeting: MeetingData) {
+    AppCard(
+        onClick = { /* TODO: Navigate to detail */ }
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Primary.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "🎳",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "${meeting.date} 정기 모임",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = meeting.location,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Gray500
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "${meeting.participantCount}명",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Primary
+                )
+                Text(
+                    text = "${meeting.gameCount}게임",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Gray500
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RankingListContent(rankings: List<RankingData>) {
+    AppCard {
+        Column {
+            rankings.forEachIndexed { index, ranking ->
+                RankingListItem(ranking = ranking)
+                if (index < rankings.lastIndex) {
+                    HorizontalDivider(color = Gray200)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RankingListItem(ranking: RankingData) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Rank
+        Box(
+            modifier = Modifier.width(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (ranking.rank <= 3) {
+                Icon(
+                    Icons.Default.EmojiEvents,
+                    contentDescription = null,
+                    tint = when (ranking.rank) {
+                        1 -> Warning
+                        2 -> Gray400
+                        else -> Color(0xFFCD7F32)
+                    },
+                    modifier = Modifier.size(24.dp)
+                )
+            } else {
+                Text(
+                    text = "${ranking.rank}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Gray400
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Name
+        Text(
+            text = ranking.name,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f)
+        )
+
+        // Change indicator
+        if (ranking.change != 0) {
+            Text(
+                text = if (ranking.change > 0) "▲${ranking.change}" else "▼${kotlin.math.abs(ranking.change)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (ranking.change > 0) Color(0xFF10B981) else Color(0xFFEF4444)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+
+        // Average
+        Text(
+            text = String.format("%.1f", ranking.average),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Primary
+        )
+    }
+}
+
+@Composable
+private fun TeamMatchContent() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "👥",
+                style = MaterialTheme.typography.displayLarge
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "팀전 기록이 없습니다",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Gray500
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "새 팀전을 시작해보세요",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Gray400
+            )
+        }
+    }
+}
