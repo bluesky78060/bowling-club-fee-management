@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -95,14 +96,9 @@ class ScoreViewModel @Inject constructor(
     }
 
     private suspend fun calculateMeetingStats(meetingId: Long): Pair<Int, Int> {
-        var participantCount = 0
-        var gameCount = 0
-
-        scoreRepository.getScoresByMeetingId(meetingId).collect { scores ->
-            participantCount = scores.map { it.memberId }.distinct().size
-            gameCount = scores.size
-        }
-
+        val scores = scoreRepository.getScoresByMeetingId(meetingId).first()
+        val participantCount = scores.map { it.memberId }.distinct().size
+        val gameCount = scores.size
         return Pair(participantCount, gameCount)
     }
 
