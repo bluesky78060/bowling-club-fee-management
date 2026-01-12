@@ -14,11 +14,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -30,6 +30,7 @@ import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +41,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.bowlingclub.fee.domain.model.Meeting
 import com.bowlingclub.fee.ui.components.AppCard
 import com.bowlingclub.fee.ui.theme.BackgroundSecondary
 import com.bowlingclub.fee.ui.theme.Gray200
@@ -47,52 +50,29 @@ import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
 import com.bowlingclub.fee.ui.theme.Warning
-
-data class MeetingData(
-    val date: String,
-    val location: String,
-    val participantCount: Int,
-    val gameCount: Int
-)
-
-data class RankingData(
-    val rank: Int,
-    val name: String,
-    val average: Double,
-    val change: Int // +1, -1, 0
-)
+import java.time.format.DateTimeFormatter
 
 @Composable
-fun ScoreScreen() {
+fun ScoreScreen(
+    viewModel: ScoreViewModel = hiltViewModel(),
+    onAddMeeting: () -> Unit = {},
+    onMeetingClick: (Meeting) -> Unit = {}
+) {
+    val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("모임 기록", "랭킹", "팀전")
-
-    // Sample data
-    val meetings = listOf(
-        MeetingData("1/12", "행복볼링장", 12, 36),
-        MeetingData("1/5", "행복볼링장", 15, 45),
-        MeetingData("12/29", "행복볼링장", 10, 30)
-    )
-
-    val rankings = listOf(
-        RankingData(1, "박민수", 193.3, 2),
-        RankingData(2, "김철수", 178.3, 0),
-        RankingData(3, "이영희", 168.5, -1),
-        RankingData(4, "최지훈", 165.2, 1),
-        RankingData(5, "정수민", 162.8, -2),
-        RankingData(6, "한지원", 158.4, 0),
-        RankingData(7, "오승환", 155.1, 0),
-        RankingData(8, "강민정", 152.3, 1)
-    )
+    val dateFormatter = DateTimeFormatter.ofPattern("M/d")
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* TODO: Add score */ },
-                containerColor = Primary,
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "점수 입력")
+            if (selectedTab == 0) {
+                FloatingActionButton(
+                    onClick = onAddMeeting,
+                    containerColor = Primary,
+                    contentColor = Color.White
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "모임 추가")
+                }
             }
         },
         containerColor = BackgroundSecondary
@@ -141,10 +121,25 @@ fun ScoreScreen() {
 
             // Content
             Column(modifier = Modifier.padding(16.dp)) {
-                when (selectedTab) {
-                    0 -> MeetingListContent(meetings = meetings)
-                    1 -> RankingListContent(rankings = rankings)
-                    2 -> TeamMatchContent()
+                if (uiState.isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = Primary)
+                    }
+                } else {
+                    when (selectedTab) {
+                        0 -> MeetingListContent(
+                            meetings = uiState.meetings,
+                            dateFormatter = dateFormatter,
+                            onMeetingClick = onMeetingClick
+                        )
+                        1 -> RankingListContent(rankings = uiState.rankings)
+                        2 -> TeamMatchContent()
+                    }
                 }
             }
         }
@@ -152,20 +147,65 @@ fun ScoreScreen() {
 }
 
 @Composable
-private fun MeetingListContent(meetings: List<MeetingData>) {
-    LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(meetings) { meeting ->
-            MeetingCard(meeting = meeting)
+private fun MeetingListContent(
+    meetings: List<MeetingWithStats>,
+    dateFormatter: DateTimeFormatter,
+    onMeetingClick: (Meeting) -> Unit
+) {
+    if (meetings.isEmpty()) {
+        EmptyMeetingContent()
+    } else {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(meetings, key = { it.meeting.id }) { meetingWithStats ->
+                MeetingCard(
+                    meetingWithStats = meetingWithStats,
+                    dateFormatter = dateFormatter,
+                    onClick = { onMeetingClick(meetingWithStats.meeting) }
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun MeetingCard(meeting: MeetingData) {
+private fun EmptyMeetingContent() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "🎳",
+                style = MaterialTheme.typography.displayLarge
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "모임 기록이 없습니다",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Gray500
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "새 모임을 시작해보세요",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Gray400
+            )
+        }
+    }
+}
+
+@Composable
+private fun MeetingCard(
+    meetingWithStats: MeetingWithStats,
+    dateFormatter: DateTimeFormatter,
+    onClick: () -> Unit
+) {
     AppCard(
-        onClick = { /* TODO: Navigate to detail */ }
+        onClick = onClick
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -186,25 +226,25 @@ private fun MeetingCard(meeting: MeetingData) {
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "${meeting.date} 정기 모임",
+                    text = "${meetingWithStats.meeting.date.format(dateFormatter)} 정기 모임",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = meeting.location,
+                    text = meetingWithStats.meeting.location.ifEmpty { "볼링장" },
                     style = MaterialTheme.typography.bodySmall,
                     color = Gray500
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "${meeting.participantCount}명",
+                    text = "${meetingWithStats.participantCount}명",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = Primary
                 )
                 Text(
-                    text = "${meeting.gameCount}게임",
+                    text = "${meetingWithStats.gameCount}게임",
                     style = MaterialTheme.typography.bodySmall,
                     color = Gray500
                 )
@@ -215,12 +255,40 @@ private fun MeetingCard(meeting: MeetingData) {
 
 @Composable
 private fun RankingListContent(rankings: List<RankingData>) {
-    AppCard {
-        Column {
-            rankings.forEachIndexed { index, ranking ->
-                RankingListItem(ranking = ranking)
-                if (index < rankings.lastIndex) {
-                    HorizontalDivider(color = Gray200)
+    if (rankings.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "🏆",
+                    style = MaterialTheme.typography.displayLarge
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "랭킹 정보가 없습니다",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Gray500
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "점수를 입력하면 랭킹이 표시됩니다",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Gray400
+                )
+            }
+        }
+    } else {
+        AppCard {
+            Column {
+                rankings.forEachIndexed { index, ranking ->
+                    RankingListItem(ranking = ranking)
+                    if (index < rankings.lastIndex) {
+                        HorizontalDivider(color = Gray200)
+                    }
                 }
             }
         }

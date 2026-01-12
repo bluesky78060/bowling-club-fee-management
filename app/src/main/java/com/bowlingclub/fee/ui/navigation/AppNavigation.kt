@@ -47,7 +47,10 @@ import com.bowlingclub.fee.ui.screens.payment.PaymentViewModel
 import com.bowlingclub.fee.ui.screens.account.AccountFormScreen
 import com.bowlingclub.fee.ui.screens.account.AccountScreen
 import com.bowlingclub.fee.ui.screens.account.AccountViewModel
+import com.bowlingclub.fee.ui.screens.score.MeetingFormScreen
+import com.bowlingclub.fee.ui.screens.score.ScoreInputScreen
 import com.bowlingclub.fee.ui.screens.score.ScoreScreen
+import com.bowlingclub.fee.ui.screens.score.ScoreViewModel
 import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
@@ -101,10 +104,13 @@ object Screen {
     const val PAYMENT_ADD = "payment/add"
     const val ACCOUNT_ADD = "account/add"
     const val ACCOUNT_EDIT = "account/edit/{accountId}"
+    const val MEETING_ADD = "score/meeting/add"
+    const val SCORE_INPUT = "score/input/{meetingId}"
 
     fun memberEdit(memberId: Long) = "member/edit/$memberId"
     fun memberDetail(memberId: Long) = "member/detail/$memberId"
     fun accountEdit(accountId: Long) = "account/edit/$accountId"
+    fun scoreInput(meetingId: Long) = "score/input/$meetingId"
 }
 
 val bottomNavItems = listOf(
@@ -356,7 +362,49 @@ fun AppNavigation() {
                 }
             }
             composable(BottomNavItem.Score.route) {
-                ScoreScreen()
+                val viewModel: ScoreViewModel = hiltViewModel()
+                ScoreScreen(
+                    viewModel = viewModel,
+                    onAddMeeting = { navController.navigate(Screen.MEETING_ADD) },
+                    onMeetingClick = { meeting ->
+                        navController.navigate(Screen.scoreInput(meeting.id))
+                    }
+                )
+            }
+
+            composable(Screen.MEETING_ADD) {
+                val parentEntry = navController.getBackStackEntry(BottomNavItem.Score.route)
+                val viewModel: ScoreViewModel = hiltViewModel(parentEntry)
+
+                MeetingFormScreen(
+                    meeting = null,
+                    onSave = { meeting ->
+                        viewModel.createMeeting(meeting.date, meeting.location, meeting.memo)
+                        navController.popBackStack()
+                    },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Screen.SCORE_INPUT,
+                arguments = listOf(navArgument("meetingId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val meetingId = backStackEntry.arguments?.getLong("meetingId") ?: return@composable
+                val parentEntry = navController.getBackStackEntry(BottomNavItem.Score.route)
+                val viewModel: ScoreViewModel = hiltViewModel(parentEntry)
+                val uiState by viewModel.uiState.collectAsState()
+
+                val meeting = uiState.meetings.find { it.meeting.id == meetingId }?.meeting
+
+                if (meeting != null) {
+                    ScoreInputScreen(
+                        viewModel = viewModel,
+                        meeting = meeting,
+                        onSave = { navController.popBackStack() },
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
     }

@@ -236,28 +236,37 @@ Phase 5: 테스트 및 배포
 
 ## Phase 3: 점수 관리 기능
 
-### 3.1 모임/점수 관리
-- [ ] MeetingRepository 구현
-- [x] ScoreRepository 구현
-- [ ] 점수 관련 UseCase 구현
+### 3.1 모임/점수 관리 ✅ (2026-01-12)
+- [x] ScoreRepository 구현 (Meeting + Score 통합)
+- [x] ScoreViewModel 구현
+  - [x] 모임 목록 조회 (참여자/게임 수 통계)
+  - [x] 랭킹 데이터 로드
+  - [x] 모임 생성/삭제
+  - [x] 점수 추가/수정/삭제
+- [ ] 점수 관련 UseCase 구현 (추후)
   - [ ] GetAllMeetingsUseCase
   - [ ] CreateMeetingUseCase
   - [ ] GetScoresByMeetingUseCase
   - [ ] AddScoreUseCase
   - [ ] UpdateScoreUseCase
   - [ ] CalculateAverageUseCase
-- [ ] 모임 목록 화면 (MeetingListScreen)
-  - [ ] 최근 모임 리스트
-  - [ ] 모임별 참여 인원/게임 수 표시
-- [ ] 모임 생성 화면 (MeetingFormScreen)
-  - [ ] 날짜 선택
-  - [ ] 볼링장 입력
-  - [ ] 메모 입력
-- [ ] 점수 입력 화면 (ScoreInputScreen)
-  - [ ] 그리드 형태 점수 입력
-  - [ ] 회원 추가 기능
-  - [ ] 게임 추가 기능
-  - [ ] 실시간 평균 계산
+- [x] ScoreScreen 개선 (실데이터 연동)
+  - [x] 모임 기록 탭 (모임 목록)
+  - [x] 랭킹 탭 (TOP 20 에버리지)
+  - [x] 팀전 탭 (빈 화면)
+  - [x] 로딩/빈 화면 처리
+- [x] 모임 생성 화면 (MeetingFormScreen)
+  - [x] 날짜 선택 (DatePicker)
+  - [x] 볼링장 입력
+  - [x] 메모 입력
+- [x] 점수 입력 화면 (ScoreInputScreen)
+  - [x] 그리드 형태 점수 입력
+  - [x] 회원 추가 기능 (체크박스 선택)
+  - [x] 게임 추가 기능 (1-6게임)
+  - [x] 실시간 평균 계산
+- [x] 네비게이션 연결 (AppNavigation)
+  - [x] ScoreScreen → MeetingFormScreen
+  - [x] ScoreScreen → ScoreInputScreen
 
 ### 3.2 통계 및 랭킹
 - [ ] 통계 관련 UseCase 구현
@@ -396,10 +405,10 @@ Phase 5: 테스트 및 배포
 |-------|---------|------|--------|
 | Phase 1 | 25 | 22 | 88% |
 | Phase 2 | 48 | 48 | 100% |
-| Phase 3 | 20 | 1 | 5% |
+| Phase 3 | 28 | 16 | 57% |
 | Phase 4 | 25 | 0 | 0% |
 | Phase 5 | 20 | 1 | 5% |
-| **총계** | **138** | **72** | **52%** |
+| **총계** | **146** | **87** | **60%** |
 
 ---
 
@@ -430,3 +439,4 @@ Phase 5: 테스트 및 배포
 | 1.3 | 2026-01-12 | Claude | Phase 2.2 회비 관리 완료 - PaymentRepository, PaymentViewModel, PaymentFormScreen, 코드 리뷰 이슈 수정 |
 | 1.4 | 2026-01-12 | Claude | Phase 2.3 장부 관리 완료 - AccountViewModel, AccountScreen, AccountFormScreen, 네비게이션 연결, 코드 리뷰 이슈 수정 |
 | 1.5 | 2026-01-12 | Claude | Phase 2.5 홈 대시보드 완료 - 실데이터 연동, 빠른 메뉴 네비게이션, 랭킹 연동, getTransactionIcon 공통화 |
+| 1.6 | 2026-01-12 | Claude | Phase 3.1 모임/점수 관리 완료 - ScoreViewModel, MeetingFormScreen, ScoreInputScreen, 네비게이션 연결 |
