@@ -28,7 +28,7 @@ import com.bowlingclub.fee.data.local.database.entity.SettlementMemberEntity
         SettlementEntity::class,
         SettlementMemberEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -48,6 +48,13 @@ abstract class AppDatabase : RoomDatabase() {
                 // Drop the old index and create a new non-unique index
                 db.execSQL("DROP INDEX IF EXISTS `index_meetings_date`")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_meetings_date` ON `meetings` (`date`)")
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add exclude_food column to settlement_members table
+                db.execSQL("ALTER TABLE `settlement_members` ADD COLUMN `exclude_food` INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

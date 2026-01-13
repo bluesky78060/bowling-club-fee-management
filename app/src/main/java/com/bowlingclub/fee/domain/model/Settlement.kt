@@ -32,6 +32,7 @@ data class SettlementMember(
     val settlementId: Long,
     val memberId: Long,
     val amount: Int,
+    val excludeFood: Boolean = false,
     val isPaid: Boolean = false,
     val paidAt: LocalDateTime? = null
 )

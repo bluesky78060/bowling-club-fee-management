@@ -294,23 +294,24 @@ Phase 5: 테스트 및 배포
 
 ## Phase 4: 고급 기능
 
-### 4.1 모임비 정산
-- [ ] SettlementRepository 구현
-- [ ] 정산 관련 UseCase 구현
-  - [ ] CreateSettlementUseCase
-  - [ ] CalculatePerPersonUseCase
-  - [ ] UpdatePaymentStatusUseCase
-  - [ ] GetPendingSettlementsUseCase
-- [ ] 정산 생성 화면 (SettlementFormScreen)
-  - [ ] 모임 선택
-  - [ ] 참석자 다중 선택
-  - [ ] 게임비/식비/기타비용 입력
-  - [ ] 자동 1인당 금액 계산
-- [ ] 정산 현황 화면 (SettlementStatusScreen)
-  - [ ] 수금 현황 표시 (완료/미수금)
-  - [ ] 개별 수금 처리
-  - [ ] 청구 메시지 복사 기능
-- [ ] 정산 히스토리
+### 4.1 모임비 정산 ✅ (2026-01-13)
+- [x] SettlementRepository 구현
+- [x] 정산 관련 기능 (ViewModel에서 직접 구현)
+  - [x] 정산 생성
+  - [x] 1인당 금액 자동 계산
+  - [x] 수금 상태 업데이트
+  - [x] 진행중/완료 정산 조회
+- [x] 정산 생성 화면 (SettlementFormScreen)
+  - [x] 모임 선택
+  - [x] 참석자 다중 선택
+  - [x] 게임비/식비/기타비용 입력
+  - [x] 자동 1인당 금액 계산
+- [x] 정산 현황 화면 (SettlementScreen)
+  - [x] 수금 현황 표시 (완료/미수금)
+  - [x] 개별 수금 처리
+  - [x] 청구 메시지 복사 기능
+- [x] 정산 상세 화면 (탭 기반: 진행중/완료)
+- [x] 홈 빠른 메뉴 정산 버튼 연결
 
 ### 4.2 찬조 관리
 - [ ] DonationRepository 구현
@@ -406,9 +407,9 @@ Phase 5: 테스트 및 배포
 | Phase 1 | 25 | 22 | 88% |
 | Phase 2 | 48 | 48 | 100% |
 | Phase 3 | 28 | 20 | 71% |
-| Phase 4 | 25 | 0 | 0% |
+| Phase 4 | 25 | 15 | 60% |
 | Phase 5 | 20 | 1 | 5% |
-| **총계** | **146** | **91** | **62%** |
+| **총계** | **146** | **106** | **73%** |
 
 ---
 
@@ -441,3 +442,4 @@ Phase 5: 테스트 및 배포
 | 1.5 | 2026-01-12 | Claude | Phase 2.5 홈 대시보드 완료 - 실데이터 연동, 빠른 메뉴 네비게이션, 랭킹 연동, getTransactionIcon 공통화 |
 | 1.6 | 2026-01-12 | Claude | Phase 3.1 모임/점수 관리 완료 - ScoreViewModel, MeetingFormScreen, ScoreInputScreen, 네비게이션 연결 |
 | 1.7 | 2026-01-13 | Claude | Phase 3.2 통계 및 랭킹 완료 - 에버리지/하이게임/성장왕 랭킹, 월간 MVP |
+| 1.8 | 2026-01-13 | Claude | Phase 4.1 모임비 정산 완료 - SettlementRepository, SettlementFormScreen, SettlementScreen, 수금 관리, 청구 메시지 복사 |

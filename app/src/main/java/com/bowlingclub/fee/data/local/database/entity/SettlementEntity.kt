@@ -113,6 +113,9 @@ data class SettlementMemberEntity(
 
     val amount: Int,
 
+    @ColumnInfo(name = "exclude_food", defaultValue = "0")
+    val excludeFood: Boolean = false,
+
     @ColumnInfo(name = "is_paid")
     val isPaid: Boolean = false,
 
@@ -124,6 +127,7 @@ data class SettlementMemberEntity(
         settlementId = settlementId,
         memberId = memberId,
         amount = amount,
+        excludeFood = excludeFood,
         isPaid = isPaid,
         paidAt = paidAt?.let { LocalDateTime.now() }
     )
@@ -134,6 +138,7 @@ data class SettlementMemberEntity(
             settlementId = sm.settlementId,
             memberId = sm.memberId,
             amount = sm.amount,
+            excludeFood = sm.excludeFood,
             isPaid = sm.isPaid,
             paidAt = sm.paidAt?.let { System.currentTimeMillis() }
         )

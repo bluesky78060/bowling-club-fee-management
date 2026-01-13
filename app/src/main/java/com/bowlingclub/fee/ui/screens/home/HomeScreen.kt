@@ -49,7 +49,8 @@ fun HomeScreen(
     onNavigateToAccountAdd: () -> Unit = {},
     onNavigateToAccount: () -> Unit = {},
     onNavigateToScore: () -> Unit = {},
-    onNavigateToMeeting: () -> Unit = {}
+    onNavigateToMeeting: () -> Unit = {},
+    onNavigateToSettlement: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -90,7 +91,8 @@ fun HomeScreen(
         QuickActionsGrid(
             onMeetingClick = onNavigateToMeeting,
             onPaymentClick = onNavigateToPayment,
-            onExpenseClick = onNavigateToAccountAdd
+            onExpenseClick = onNavigateToAccountAdd,
+            onSettlementClick = onNavigateToSettlement
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -198,7 +200,8 @@ private fun BalanceCard(
 private fun QuickActionsGrid(
     onMeetingClick: () -> Unit,
     onPaymentClick: () -> Unit,
-    onExpenseClick: () -> Unit
+    onExpenseClick: () -> Unit,
+    onSettlementClick: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -225,7 +228,7 @@ private fun QuickActionsGrid(
         QuickActionButton(
             icon = "📋",
             label = "정산",
-            onClick = { },
+            onClick = onSettlementClick,
             modifier = Modifier.weight(1f)
         )
     }

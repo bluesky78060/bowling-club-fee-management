@@ -51,6 +51,9 @@ import com.bowlingclub.fee.ui.screens.score.MeetingFormScreen
 import com.bowlingclub.fee.ui.screens.score.ScoreInputScreen
 import com.bowlingclub.fee.ui.screens.score.ScoreScreen
 import com.bowlingclub.fee.ui.screens.score.ScoreViewModel
+import com.bowlingclub.fee.ui.screens.settlement.SettlementFormScreen
+import com.bowlingclub.fee.ui.screens.settlement.SettlementScreen
+import com.bowlingclub.fee.ui.screens.settlement.SettlementViewModel
 import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
@@ -106,6 +109,8 @@ object Screen {
     const val ACCOUNT_EDIT = "account/edit/{accountId}"
     const val MEETING_ADD = "score/meeting/add"
     const val SCORE_INPUT = "score/input/{meetingId}"
+    const val SETTLEMENT = "settlement"
+    const val SETTLEMENT_ADD = "settlement/add"
 
     fun memberEdit(memberId: Long) = "member/edit/$memberId"
     fun memberDetail(memberId: Long) = "member/detail/$memberId"
@@ -203,7 +208,8 @@ fun AppNavigation() {
                             restoreState = true
                         }
                     },
-                    onNavigateToMeeting = { navController.navigate(Screen.MEETING_ADD) }
+                    onNavigateToMeeting = { navController.navigate(Screen.MEETING_ADD) },
+                    onNavigateToSettlement = { navController.navigate(Screen.SETTLEMENT) }
                 )
             }
 
@@ -406,6 +412,35 @@ fun AppNavigation() {
                         onBack = { navController.popBackStack() }
                     )
                 }
+            }
+
+            // Settlement screens
+            composable(Screen.SETTLEMENT) {
+                val viewModel: SettlementViewModel = hiltViewModel()
+                SettlementScreen(
+                    viewModel = viewModel,
+                    onAddSettlement = { navController.navigate(Screen.SETTLEMENT_ADD) },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.SETTLEMENT_ADD) {
+                val viewModel: SettlementViewModel = hiltViewModel()
+                val memberViewModel: MemberViewModel = hiltViewModel()
+                val uiState by viewModel.uiState.collectAsState()
+                val memberUiState by memberViewModel.uiState.collectAsState()
+
+                SettlementFormScreen(
+                    meetings = uiState.recentMeetings,
+                    members = memberUiState.members.filter {
+                        it.status == com.bowlingclub.fee.domain.model.MemberStatus.ACTIVE
+                    },
+                    onSave = { meetingId, gameFee, foodFee, otherFee, memo, memberIds, excludeFoodMemberIds ->
+                        viewModel.createSettlement(meetingId, gameFee, foodFee, otherFee, memo, memberIds, excludeFoodMemberIds)
+                        navController.popBackStack()
+                    },
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }
