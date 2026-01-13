@@ -5,8 +5,10 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.bowlingclub.fee.domain.model.Account
 import com.bowlingclub.fee.domain.model.AccountType
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 @Entity(tableName = "accounts")
 data class AccountEntity(
@@ -36,7 +38,7 @@ data class AccountEntity(
         date = LocalDate.ofEpochDay(date),
         description = description,
         memo = memo,
-        createdAt = LocalDateTime.now()
+        createdAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(createdAt), ZoneId.systemDefault())
     )
 
     companion object {
@@ -48,7 +50,7 @@ data class AccountEntity(
             date = account.date.toEpochDay(),
             description = account.description,
             memo = account.memo,
-            createdAt = System.currentTimeMillis()
+            createdAt = account.createdAt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         )
     }
 }

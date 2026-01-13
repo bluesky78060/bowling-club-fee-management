@@ -4,6 +4,7 @@ import com.bowlingclub.fee.data.local.database.dao.MeetingDao
 import com.bowlingclub.fee.data.local.database.dao.MeetingWithStatsEntity
 import com.bowlingclub.fee.data.local.database.dao.MemberAverageRanking
 import com.bowlingclub.fee.data.local.database.dao.MemberGrowthRanking
+import com.bowlingclub.fee.data.local.database.dao.MemberHandicapRanking
 import com.bowlingclub.fee.data.local.database.dao.MemberHighGameRanking
 import com.bowlingclub.fee.data.local.database.dao.MemberMonthlyMVP
 import com.bowlingclub.fee.data.local.database.dao.ScoreDao
@@ -143,4 +144,7 @@ class ScoreRepository @Inject constructor(
 
     suspend fun getMonthlyMVP(startDate: Long, endDate: Long, minGames: Int = 3): Result<MemberMonthlyMVP?> =
         Result.runCatching { scoreDao.getMonthlyMVP(startDate, endDate, minGames) }
+
+    suspend fun getTopHandicapRankings(limit: Int = 20): Result<List<MemberHandicapRanking>> =
+        Result.runCatching { scoreDao.getTopHandicapRankings(limit) }
 }

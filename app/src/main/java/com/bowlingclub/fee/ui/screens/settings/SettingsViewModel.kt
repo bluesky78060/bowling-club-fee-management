@@ -13,8 +13,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import javax.inject.Inject
 
 data class SettingsUiState(
@@ -140,9 +138,9 @@ class SettingsViewModel @Inject constructor(
             _uiState.update { it.copy(restoreInProgress = true) }
             try {
                 val inputStream = context.contentResolver.openInputStream(uri)
-                val reader = BufferedReader(InputStreamReader(inputStream))
-                val jsonString = reader.readText()
-                reader.close()
+                    ?: throw IllegalStateException("파일을 열 수 없습니다")
+
+                val jsonString = inputStream.bufferedReader().use { it.readText() }
 
                 val json = JSONObject(jsonString)
                 val settings = AppSettings(
@@ -165,6 +163,14 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(restoreInProgress = false) }
             }
         }
+    }
+
+    fun showExportSuccess() {
+        _uiState.update { it.copy(successMessage = "설정이 내보내기되었습니다") }
+    }
+
+    fun showExportError(message: String) {
+        _uiState.update { it.copy(errorMessage = "내보내기 실패: $message") }
     }
 
     fun clearError() {

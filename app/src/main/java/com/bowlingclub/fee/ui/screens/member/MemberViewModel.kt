@@ -134,22 +134,25 @@ class MemberViewModel @Inject constructor(
         }
     }
 
+    @Deprecated(
+        message = "Use loadMemberById() instead and observe uiState.selectedMember",
+        replaceWith = ReplaceWith("loadMemberById(memberId)")
+    )
     fun getMemberById(memberId: Long): Member? {
         // First try to find in current list (fast path)
-        val cachedMember = _uiState.value.members.find { it.id == memberId }
-        if (cachedMember != null) return cachedMember
-
-        // If not found, load from repository
-        viewModelScope.launch {
-            val result = memberRepository.getMemberById(memberId)
-            if (result.isSuccess) {
-                _uiState.update { it.copy(selectedMember = result.getOrNull()) }
-            }
-        }
-        return _uiState.value.selectedMember
+        return _uiState.value.members.find { it.id == memberId }
+            ?: _uiState.value.selectedMember?.takeIf { it.id == memberId }
     }
 
     fun loadMemberById(memberId: Long) {
+        // Quick check in cache first
+        val cached = _uiState.value.members.find { it.id == memberId }
+        if (cached != null) {
+            _uiState.update { it.copy(selectedMember = cached, errorMessage = null) }
+            return
+        }
+
+        // Load from database
         viewModelScope.launch {
             val result = memberRepository.getMemberById(memberId)
             _uiState.update { currentState ->

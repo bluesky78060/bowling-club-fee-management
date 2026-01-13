@@ -6,7 +6,9 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.bowlingclub.fee.domain.model.Score
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 @Entity(
     tableName = "scores",
@@ -53,7 +55,7 @@ data class ScoreEntity(
         meetingId = meetingId,
         gameNumber = gameNumber,
         score = score,
-        createdAt = LocalDateTime.now()
+        createdAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(createdAt), ZoneId.systemDefault())
     )
 
     companion object {
@@ -63,7 +65,7 @@ data class ScoreEntity(
             meetingId = score.meetingId,
             gameNumber = score.gameNumber,
             score = score.score,
-            createdAt = System.currentTimeMillis()
+            createdAt = score.createdAt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         )
     }
 }

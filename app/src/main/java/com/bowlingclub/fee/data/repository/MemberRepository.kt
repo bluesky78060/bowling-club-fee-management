@@ -30,10 +30,16 @@ class MemberRepository @Inject constructor(
             .map { entities -> entities.map { it.toDomain() } }
             .catch { emit(emptyList()) }
 
-    fun searchMembers(query: String): Flow<List<Member>> =
-        memberDao.searchMembers(query)
+    fun searchMembers(query: String): Flow<List<Member>> {
+        // Escape SQL LIKE special characters to prevent injection
+        val escapedQuery = query
+            .replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
+        return memberDao.searchMembers(escapedQuery)
             .map { entities -> entities.map { it.toDomain() } }
             .catch { emit(emptyList()) }
+    }
 
     fun getMemberCountByStatus(status: MemberStatus): Flow<Int> =
         memberDao.getMemberCountByStatus(status.toDbValue())

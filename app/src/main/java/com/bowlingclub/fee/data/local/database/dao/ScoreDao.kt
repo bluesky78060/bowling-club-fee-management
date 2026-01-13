@@ -158,6 +158,19 @@ interface ScoreDao {
         LIMIT 1
     """)
     suspend fun getMonthlyMVP(startDate: Long, endDate: Long, minGames: Int = 3): MemberMonthlyMVP?
+
+    @Query("""
+        SELECT s.member_id, m.name, m.handicap, AVG(s.score) as scratch_average,
+               AVG(s.score + m.handicap) as handicap_average, COUNT(s.id) as game_count
+        FROM scores s
+        INNER JOIN members m ON s.member_id = m.id
+        WHERE m.status = 'active' AND m.handicap > 0
+        GROUP BY s.member_id
+        HAVING game_count >= 3
+        ORDER BY handicap_average DESC
+        LIMIT :limit
+    """)
+    suspend fun getTopHandicapRankings(limit: Int): List<MemberHandicapRanking>
 }
 
 data class MemberAverageRanking(
@@ -184,5 +197,14 @@ data class MemberMonthlyMVP(
     val member_id: Long,
     val name: String,
     val average: Double,
+    val game_count: Int
+)
+
+data class MemberHandicapRanking(
+    val member_id: Long,
+    val name: String,
+    val handicap: Int,
+    val scratch_average: Double,
+    val handicap_average: Double,
     val game_count: Int
 )

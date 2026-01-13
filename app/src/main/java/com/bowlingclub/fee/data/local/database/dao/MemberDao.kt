@@ -24,7 +24,11 @@ interface MemberDao {
     @Query("SELECT * FROM members WHERE id = :id")
     suspend fun getMemberById(id: Long): MemberEntity?
 
-    @Query("SELECT * FROM members WHERE name LIKE '%' || :query || '%' OR phone LIKE '%' || :query || '%'")
+    @Query("""
+        SELECT * FROM members
+        WHERE name LIKE '%' || :query || '%' ESCAPE '\'
+        OR phone LIKE '%' || :query || '%' ESCAPE '\'
+    """)
     fun searchMembers(query: String): Flow<List<MemberEntity>>
 
     @Query("SELECT COUNT(*) FROM members WHERE status = :status")

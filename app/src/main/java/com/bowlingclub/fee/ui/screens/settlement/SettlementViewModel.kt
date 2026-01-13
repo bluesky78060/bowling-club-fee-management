@@ -122,8 +122,25 @@ class SettlementViewModel @Inject constructor(
         memberIds: List<Long>,
         excludeFoodMemberIds: List<Long> = emptyList()
     ) {
+        // Input validation
         if (memberIds.isEmpty()) {
             _uiState.update { it.copy(errorMessage = "참석자를 선택해주세요") }
+            return
+        }
+
+        if (gameFee < 0 || foodFee < 0 || otherFee < 0) {
+            _uiState.update { it.copy(errorMessage = "비용은 0 이상이어야 합니다") }
+            return
+        }
+
+        if (memberIds.distinct().size != memberIds.size) {
+            _uiState.update { it.copy(errorMessage = "중복된 참석자가 있습니다") }
+            return
+        }
+
+        val invalidExcludeIds = excludeFoodMemberIds.filterNot { it in memberIds }
+        if (invalidExcludeIds.isNotEmpty()) {
+            _uiState.update { it.copy(errorMessage = "식비 제외자가 참석자 목록에 없습니다") }
             return
         }
 

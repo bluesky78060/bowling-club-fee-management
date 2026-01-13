@@ -37,8 +37,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -59,6 +57,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bowlingclub.fee.ui.components.CommonButton
+import com.bowlingclub.fee.BuildConfig
 import com.bowlingclub.fee.ui.components.LoadingIndicator
 import com.bowlingclub.fee.ui.theme.Danger
 import com.bowlingclub.fee.ui.theme.Gray100
@@ -85,10 +84,14 @@ fun SettingsScreen(
         uri?.let {
             try {
                 val json = viewModel.exportSettingsToJson()
-                context.contentResolver.openOutputStream(it)?.use { outputStream ->
-                    outputStream.write(json.toByteArray())
+                val outputStream = context.contentResolver.openOutputStream(it)
+                    ?: throw IllegalStateException("파일을 열 수 없습니다")
+                outputStream.use { stream ->
+                    stream.write(json.toByteArray())
                 }
-            } catch (_: Exception) {
+                viewModel.showExportSuccess()
+            } catch (e: Exception) {
+                viewModel.showExportError(e.message ?: "알 수 없는 오류")
             }
         }
     }
@@ -240,7 +243,7 @@ fun SettingsScreen(
                 SettingsSection(title = "앱 정보") {
                     SettingsInfoItem(
                         label = "버전",
-                        value = "1.0.0"
+                        value = BuildConfig.VERSION_NAME
                     )
                     HorizontalDivider(color = Gray200)
                     SettingsInfoItem(
@@ -371,44 +374,6 @@ private fun SettingsNumberField(
                 color = Gray500
             )
         }
-    }
-}
-
-@Composable
-private fun SettingsSwitchItem(
-    label: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = Gray500
-            )
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = Primary,
-                uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = Gray200
-            )
-        )
     }
 }
 

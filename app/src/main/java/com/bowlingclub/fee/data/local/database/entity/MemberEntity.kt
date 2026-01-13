@@ -6,8 +6,10 @@ import androidx.room.PrimaryKey
 import com.bowlingclub.fee.domain.model.Gender
 import com.bowlingclub.fee.domain.model.Member
 import com.bowlingclub.fee.domain.model.MemberStatus
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 @Entity(tableName = "members")
 data class MemberEntity(
@@ -48,8 +50,8 @@ data class MemberEntity(
         handicap = handicap,
         status = MemberStatus.fromDbValue(status),
         memo = memo,
-        createdAt = LocalDateTime.now(),
-        updatedAt = LocalDateTime.now()
+        createdAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(createdAt), ZoneId.systemDefault()),
+        updatedAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(updatedAt), ZoneId.systemDefault())
     )
 
     companion object {
@@ -63,7 +65,7 @@ data class MemberEntity(
             handicap = member.handicap,
             status = member.status.dbValue,
             memo = member.memo,
-            createdAt = System.currentTimeMillis(),
+            createdAt = member.createdAt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
             updatedAt = System.currentTimeMillis()
         )
     }

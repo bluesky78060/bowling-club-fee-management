@@ -11,6 +11,7 @@ import com.bowlingclub.fee.domain.model.MemberStatus
 import com.bowlingclub.fee.domain.model.Score
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,11 +52,22 @@ data class MonthlyMVPData(
     val gameCount: Int
 )
 
+data class HandicapRankingData(
+    val rank: Int,
+    val memberId: Long,
+    val name: String,
+    val handicap: Int,
+    val scratchAverage: Double,
+    val handicapAverage: Double,
+    val gameCount: Int
+)
+
 data class ScoreUiState(
     val meetings: List<MeetingWithStats> = emptyList(),
     val rankings: List<RankingData> = emptyList(),
     val highGameRankings: List<HighGameRankingData> = emptyList(),
     val growthRankings: List<GrowthRankingData> = emptyList(),
+    val handicapRankings: List<HandicapRankingData> = emptyList(),
     val monthlyMVP: MonthlyMVPData? = null,
     val activeMembers: List<Member> = emptyList(),
     val selectedMeeting: Meeting? = null,
@@ -92,11 +104,18 @@ class ScoreViewModel @Inject constructor(
             ) { meetingsWithStats, members ->
                 Pair(meetingsWithStats, members)
             }.collect { (meetingsWithStats, members) ->
-                // Load rankings when data changes
-                val rankings = loadRankings()
-                val highGameRankings = loadHighGameRankings()
-                val growthRankings = loadGrowthRankings()
-                val monthlyMVP = loadMonthlyMVP()
+                // Load rankings in parallel for better performance
+                val rankingsDeferred = async { loadRankings() }
+                val highGameDeferred = async { loadHighGameRankings() }
+                val growthDeferred = async { loadGrowthRankings() }
+                val handicapDeferred = async { loadHandicapRankings() }
+                val mvpDeferred = async { loadMonthlyMVP() }
+
+                val rankings = rankingsDeferred.await()
+                val highGameRankings = highGameDeferred.await()
+                val growthRankings = growthDeferred.await()
+                val handicapRankings = handicapDeferred.await()
+                val monthlyMVP = mvpDeferred.await()
 
                 _uiState.update {
                     it.copy(
@@ -104,6 +123,7 @@ class ScoreViewModel @Inject constructor(
                         rankings = rankings,
                         highGameRankings = highGameRankings,
                         growthRankings = growthRankings,
+                        handicapRankings = handicapRankings,
                         monthlyMVP = monthlyMVP,
                         activeMembers = members,
                         isLoading = false
@@ -156,6 +176,25 @@ class ScoreViewModel @Inject constructor(
                     currentAverage = ranking.current_average,
                     totalGames = ranking.total_games,
                     growthAmount = ranking.growth_amount
+                )
+            } ?: emptyList()
+        } else {
+            emptyList()
+        }
+    }
+
+    private suspend fun loadHandicapRankings(): List<HandicapRankingData> {
+        val result = scoreRepository.getTopHandicapRankings(20)
+        return if (result.isSuccess) {
+            result.getOrNull()?.mapIndexed { index, ranking ->
+                HandicapRankingData(
+                    rank = index + 1,
+                    memberId = ranking.member_id,
+                    name = ranking.name,
+                    handicap = ranking.handicap,
+                    scratchAverage = ranking.scratch_average,
+                    handicapAverage = ranking.handicap_average,
+                    gameCount = ranking.game_count
                 )
             } ?: emptyList()
         } else {

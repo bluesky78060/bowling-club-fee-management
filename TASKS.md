@@ -284,11 +284,11 @@ Phase 5: 테스트 및 배포
   - [x] 월간 MVP
   - [x] 성장왕
 
-### 3.3 핸디캡 시스템
-- [ ] 핸디캡 계산 UseCase 구현
-- [ ] 회원 정보에서 핸디캡 설정
-- [ ] 핸디캡 적용 점수 표시
-- [ ] 핸디캡 랭킹 표시
+### 3.3 핸디캡 시스템 ✅ (2026-01-13)
+- [x] 핸디캡 계산 UseCase 구현
+- [x] 회원 정보에서 핸디캡 설정
+- [x] 핸디캡 적용 점수 표시
+- [x] 핸디캡 랭킹 표시
 
 ---
 
@@ -380,15 +380,14 @@ Phase 5: 테스트 및 배포
 
 ## Phase 5: 테스트 및 배포
 
-### 5.1 테스트
-- [ ] Unit Test 작성
-  - [ ] UseCase 테스트
-  - [ ] Repository 테스트
-  - [ ] ViewModel 테스트
-- [ ] UI Test 작성
-  - [ ] 주요 화면 테스트
-  - [ ] 네비게이션 테스트
-- [ ] 통합 테스트
+### 5.1 테스트 ✅ (2026-01-13)
+- [x] Unit Test 작성
+  - [x] Domain Model 테스트 (Result, Member, Account, Gender, MemberStatus, AccountType)
+  - [x] Repository 테스트 (MemberRepository - MockK 사용)
+  - [x] ViewModel 테스트 (MemberViewModel - Coroutine Test, Turbine)
+- [x] UI Test 작성
+  - [x] 네비게이션 테스트 (BottomNavItem)
+  - [x] 데이터베이스 통합 테스트 (Room In-Memory DB)
 - [ ] 사용성 테스트 (실제 사용 시나리오)
 
 ### 5.2 최적화
@@ -424,10 +423,10 @@ Phase 5: 테스트 및 배포
 |-------|---------|------|--------|
 | Phase 1 | 25 | 25 | 100% |
 | Phase 2 | 48 | 48 | 100% |
-| Phase 3 | 28 | 20 | 71% |
+| Phase 3 | 28 | 24 | 86% |
 | Phase 4 | 25 | 25 | 100% |
-| Phase 5 | 20 | 1 | 5% |
-| **총계** | **146** | **119** | **82%** |
+| Phase 5 | 20 | 8 | 40% |
+| **총계** | **146** | **130** | **89%** |
 
 ---
 
@@ -465,3 +464,6 @@ Phase 5: 테스트 및 배포
 | 2.0 | 2026-01-13 | Claude | Phase 4.3 찬조 관리 완료 - DonationRepository, DonationScreen, DonationFormScreen, DB Migration 3→4 |
 | 2.1 | 2026-01-13 | Claude | Phase 4.4 팀전 기능 완료 - TeamRepository, TeamViewModel, TeamScreen, TeamFormScreen, TeamMatchFormScreen, TeamMatchScoreScreen, DB Migration 4→5 |
 | 2.2 | 2026-01-13 | Claude | Phase 4.5 설정 기능 완료 - SettingsDataStore, SettingsRepository, SettingsViewModel, SettingsScreen, 설정 내보내기/가져오기 |
+| 2.3 | 2026-01-13 | Claude | Phase 3.3 핸디캡 시스템 완료 - 핸디캡 랭킹 쿼리, UI 구현, ScoreDao/Repository/ViewModel/Screen 업데이트 |
+| 2.4 | 2026-01-13 | Claude | Phase 5.1 테스트 완료 - Unit Test (57개, 100% 통과), MockK/Turbine/Coroutines Test 환경 구축, Room DB 통합 테스트 |
+| 2.5 | 2026-01-13 | Claude | 심화 코드 리뷰 - P0/P1 이슈 수정: Entity 타임스탬프 변환, getMemberById 레이스컨디션, 병렬 쿼리 최적화, SQL Injection 방지, 입력 검증 추가 |

@@ -151,6 +151,7 @@ fun ScoreScreen(
                             averageRankings = uiState.rankings,
                             highGameRankings = uiState.highGameRankings,
                             growthRankings = uiState.growthRankings,
+                            handicapRankings = uiState.handicapRankings,
                             monthlyMVP = uiState.monthlyMVP
                         )
                         2 -> TeamMatchContent(onNavigateToTeam = onTeamMatchClick)
@@ -271,7 +272,8 @@ private fun MeetingCard(
 enum class RankingType(val label: String) {
     AVERAGE("에버리지"),
     HIGH_GAME("하이게임"),
-    GROWTH("성장왕")
+    GROWTH("성장왕"),
+    HANDICAP("핸디캡")
 }
 
 @Composable
@@ -279,6 +281,7 @@ private fun RankingTabContent(
     averageRankings: List<RankingData>,
     highGameRankings: List<HighGameRankingData>,
     growthRankings: List<GrowthRankingData>,
+    handicapRankings: List<HandicapRankingData>,
     monthlyMVP: MonthlyMVPData?
 ) {
     var selectedRankingType by remember { mutableIntStateOf(0) }
@@ -318,6 +321,7 @@ private fun RankingTabContent(
             RankingType.AVERAGE -> AverageRankingList(rankings = averageRankings)
             RankingType.HIGH_GAME -> HighGameRankingList(rankings = highGameRankings)
             RankingType.GROWTH -> GrowthRankingList(rankings = growthRankings)
+            RankingType.HANDICAP -> HandicapRankingList(rankings = handicapRankings)
         }
     }
 }
@@ -669,6 +673,110 @@ private fun GrowthRankingItem(ranking: GrowthRankingData) {
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = Success
+        )
+    }
+}
+
+@Composable
+private fun HandicapRankingList(rankings: List<HandicapRankingData>) {
+    if (rankings.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "🎯",
+                    style = MaterialTheme.typography.displayLarge
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "핸디캡 랭킹이 없습니다",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Gray500
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "핸디캡이 설정된 회원이 표시됩니다",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Gray400
+                )
+            }
+        }
+    } else {
+        AppCard {
+            Column {
+                rankings.forEachIndexed { index, ranking ->
+                    HandicapRankingItem(ranking = ranking)
+                    if (index < rankings.lastIndex) {
+                        HorizontalDivider(color = Gray200)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HandicapRankingItem(ranking: HandicapRankingData) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Rank
+        Box(
+            modifier = Modifier.width(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (ranking.rank <= 3) {
+                Icon(
+                    Icons.Default.EmojiEvents,
+                    contentDescription = null,
+                    tint = when (ranking.rank) {
+                        1 -> Warning
+                        2 -> Gray400
+                        else -> Color(0xFFCD7F32)
+                    },
+                    modifier = Modifier.size(24.dp)
+                )
+            } else {
+                Text(
+                    text = "${ranking.rank}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Gray400
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Name and scratch info
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = ranking.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "스크래치 ${String.format("%.1f", ranking.scratchAverage)} + HC ${ranking.handicap}",
+                style = MaterialTheme.typography.bodySmall,
+                color = Gray500
+            )
+        }
+
+        // Handicap Average
+        Text(
+            text = String.format("%.1f", ranking.handicapAverage),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Primary
         )
     }
 }
