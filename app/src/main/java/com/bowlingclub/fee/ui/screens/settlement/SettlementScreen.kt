@@ -3,6 +3,7 @@ package com.bowlingclub.fee.ui.screens.settlement
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -114,6 +116,15 @@ fun SettlementScreen(
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("정산 안내", message))
                 Toast.makeText(context, "청구 메시지가 복사되었습니다", Toast.LENGTH_SHORT).show()
+            },
+            onShareMessage = {
+                val message = viewModel.generateBillingMessage(details)
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, message)
+                    putExtra(Intent.EXTRA_SUBJECT, "볼링 동호회 정산 안내")
+                }
+                context.startActivity(Intent.createChooser(shareIntent, "정산 안내 공유"))
             },
             onBack = { viewModel.clearSelectedSettlement() }
         )
@@ -328,6 +339,7 @@ private fun SettlementDetailScreen(
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onCopyMessage: () -> Unit,
+    onShareMessage: () -> Unit,
     onBack: () -> Unit
 ) {
     val settlement = details.settlement
@@ -391,6 +403,9 @@ private fun SettlementDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onShareMessage) {
+                        Icon(Icons.Default.Share, contentDescription = "공유", tint = Primary)
+                    }
                     IconButton(onClick = onCopyMessage) {
                         Icon(Icons.Default.ContentCopy, contentDescription = "메시지 복사")
                     }
@@ -631,8 +646,8 @@ private fun SettlementDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
-                            text = "메시지 복사",
-                            onClick = onCopyMessage,
+                            text = "📤 카톡 공유",
+                            onClick = onShareMessage,
                             modifier = Modifier.weight(1f)
                         )
                         PrimaryButton(

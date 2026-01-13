@@ -50,7 +50,8 @@ fun HomeScreen(
     onNavigateToAccount: () -> Unit = {},
     onNavigateToScore: () -> Unit = {},
     onNavigateToMeeting: () -> Unit = {},
-    onNavigateToSettlement: () -> Unit = {}
+    onNavigateToSettlement: () -> Unit = {},
+    onNavigateToDonation: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -92,7 +93,8 @@ fun HomeScreen(
             onMeetingClick = onNavigateToMeeting,
             onPaymentClick = onNavigateToPayment,
             onExpenseClick = onNavigateToAccountAdd,
-            onSettlementClick = onNavigateToSettlement
+            onSettlementClick = onNavigateToSettlement,
+            onDonationClick = onNavigateToDonation
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -201,36 +203,53 @@ private fun QuickActionsGrid(
     onMeetingClick: () -> Unit,
     onPaymentClick: () -> Unit,
     onExpenseClick: () -> Unit,
-    onSettlementClick: () -> Unit
+    onSettlementClick: () -> Unit,
+    onDonationClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        QuickActionButton(
-            icon = "🎳",
-            label = "모임 시작",
-            onClick = onMeetingClick,
-            modifier = Modifier.weight(1f)
-        )
-        QuickActionButton(
-            icon = "💰",
-            label = "납부 등록",
-            onClick = onPaymentClick,
-            modifier = Modifier.weight(1f)
-        )
-        QuickActionButton(
-            icon = "📝",
-            label = "지출 등록",
-            onClick = onExpenseClick,
-            modifier = Modifier.weight(1f)
-        )
-        QuickActionButton(
-            icon = "📋",
-            label = "정산",
-            onClick = onSettlementClick,
-            modifier = Modifier.weight(1f)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            QuickActionButton(
+                icon = "🎳",
+                label = "모임 시작",
+                onClick = onMeetingClick,
+                modifier = Modifier.weight(1f)
+            )
+            QuickActionButton(
+                icon = "💰",
+                label = "납부 등록",
+                onClick = onPaymentClick,
+                modifier = Modifier.weight(1f)
+            )
+            QuickActionButton(
+                icon = "📝",
+                label = "지출 등록",
+                onClick = onExpenseClick,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            QuickActionButton(
+                icon = "📋",
+                label = "정산",
+                onClick = onSettlementClick,
+                modifier = Modifier.weight(1f)
+            )
+            QuickActionButton(
+                icon = "🎁",
+                label = "찬조",
+                onClick = onDonationClick,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.weight(1f))
+        }
     }
 }
 

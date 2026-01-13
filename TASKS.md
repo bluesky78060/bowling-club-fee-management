@@ -313,7 +313,13 @@ Phase 5: 테스트 및 배포
 - [x] 정산 상세 화면 (탭 기반: 진행중/완료)
 - [x] 홈 빠른 메뉴 정산 버튼 연결
 
-### 4.2 찬조 관리
+### 4.2 카카오톡 공유 ✅ (2026-01-13)
+- [x] Android Share Intent 연동
+- [x] 정산 상세 화면에 공유 버튼 추가
+- [x] 청구 메시지 카카오톡/문자 등 앱으로 공유
+- [x] 타임스탬프 변환 버그 수정 (P1 코드 리뷰 이슈)
+
+### 4.3 찬조 관리
 - [ ] DonationRepository 구현
 - [ ] 찬조 관련 UseCase 구현
   - [ ] GetAllDonationsUseCase
@@ -329,7 +335,7 @@ Phase 5: 테스트 및 배포
   - [ ] 금액 또는 물품 정보 입력
   - [ ] 용도 입력
 
-### 4.3 팀전 기능
+### 4.4 팀전 기능
 - [ ] TeamRepository 구현
 - [ ] TeamMatchRepository 구현
 - [ ] 팀전 관련 UseCase 구현
@@ -347,7 +353,7 @@ Phase 5: 테스트 및 배포
   - [ ] 팀 순위
   - [ ] 개인별 점수
 
-### 4.4 설정 및 기타
+### 4.5 설정 및 기타
 - [ ] 설정 화면 (SettingsScreen)
   - [ ] 동호회 이름 설정
   - [ ] 기본 회비 금액 설정
@@ -443,3 +449,4 @@ Phase 5: 테스트 및 배포
 | 1.6 | 2026-01-12 | Claude | Phase 3.1 모임/점수 관리 완료 - ScoreViewModel, MeetingFormScreen, ScoreInputScreen, 네비게이션 연결 |
 | 1.7 | 2026-01-13 | Claude | Phase 3.2 통계 및 랭킹 완료 - 에버리지/하이게임/성장왕 랭킹, 월간 MVP |
 | 1.8 | 2026-01-13 | Claude | Phase 4.1 모임비 정산 완료 - SettlementRepository, SettlementFormScreen, SettlementScreen, 수금 관리, 청구 메시지 복사 |
+| 1.9 | 2026-01-13 | Claude | Phase 4.2 카카오톡 공유 완료 - Android Share Intent, 타임스탬프 버그 수정 |

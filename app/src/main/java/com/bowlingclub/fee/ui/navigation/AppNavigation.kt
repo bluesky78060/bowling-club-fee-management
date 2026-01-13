@@ -54,6 +54,9 @@ import com.bowlingclub.fee.ui.screens.score.ScoreViewModel
 import com.bowlingclub.fee.ui.screens.settlement.SettlementFormScreen
 import com.bowlingclub.fee.ui.screens.settlement.SettlementScreen
 import com.bowlingclub.fee.ui.screens.settlement.SettlementViewModel
+import com.bowlingclub.fee.ui.screens.donation.DonationFormScreen
+import com.bowlingclub.fee.ui.screens.donation.DonationScreen
+import com.bowlingclub.fee.ui.screens.donation.DonationViewModel
 import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
@@ -111,6 +114,8 @@ object Screen {
     const val SCORE_INPUT = "score/input/{meetingId}"
     const val SETTLEMENT = "settlement"
     const val SETTLEMENT_ADD = "settlement/add"
+    const val DONATION = "donation"
+    const val DONATION_ADD = "donation/add"
 
     fun memberEdit(memberId: Long) = "member/edit/$memberId"
     fun memberDetail(memberId: Long) = "member/detail/$memberId"
@@ -209,7 +214,8 @@ fun AppNavigation() {
                         }
                     },
                     onNavigateToMeeting = { navController.navigate(Screen.MEETING_ADD) },
-                    onNavigateToSettlement = { navController.navigate(Screen.SETTLEMENT) }
+                    onNavigateToSettlement = { navController.navigate(Screen.SETTLEMENT) },
+                    onNavigateToDonation = { navController.navigate(Screen.DONATION) }
                 )
             }
 
@@ -439,6 +445,24 @@ fun AppNavigation() {
                         viewModel.createSettlement(meetingId, gameFee, foodFee, otherFee, memo, memberIds, excludeFoodMemberIds)
                         navController.popBackStack()
                     },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            // Donation screens
+            composable(Screen.DONATION) {
+                val viewModel: DonationViewModel = hiltViewModel()
+                DonationScreen(
+                    viewModel = viewModel,
+                    onAddDonation = { navController.navigate(Screen.DONATION_ADD) },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.DONATION_ADD) {
+                val viewModel: DonationViewModel = hiltViewModel()
+                DonationFormScreen(
+                    viewModel = viewModel,
                     onBack = { navController.popBackStack() }
                 )
             }

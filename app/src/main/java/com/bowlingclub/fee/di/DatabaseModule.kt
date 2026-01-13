@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.bowlingclub.fee.data.local.database.AppDatabase
 import com.bowlingclub.fee.data.local.database.dao.AccountDao
+import com.bowlingclub.fee.data.local.database.dao.DonationDao
 import com.bowlingclub.fee.data.local.database.dao.MeetingDao
 import com.bowlingclub.fee.data.local.database.dao.MemberDao
 import com.bowlingclub.fee.data.local.database.dao.PaymentDao
@@ -30,7 +31,11 @@ object DatabaseModule {
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME
         )
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
+            .addMigrations(
+                AppDatabase.MIGRATION_1_2,
+                AppDatabase.MIGRATION_2_3,
+                AppDatabase.MIGRATION_3_4
+            )
             .build()
     }
 
@@ -62,5 +67,10 @@ object DatabaseModule {
     @Provides
     fun provideSettlementDao(database: AppDatabase): SettlementDao {
         return database.settlementDao()
+    }
+
+    @Provides
+    fun provideDonationDao(database: AppDatabase): DonationDao {
+        return database.donationDao()
     }
 }

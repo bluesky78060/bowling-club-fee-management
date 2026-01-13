@@ -8,7 +8,9 @@ import androidx.room.PrimaryKey
 import com.bowlingclub.fee.domain.model.Settlement
 import com.bowlingclub.fee.domain.model.SettlementMember
 import com.bowlingclub.fee.domain.model.SettlementStatus
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 @Entity(
     tableName = "settlements",
@@ -61,7 +63,10 @@ data class SettlementEntity(
         perPerson = perPerson,
         status = SettlementStatus.fromDbValue(status),
         memo = memo,
-        createdAt = LocalDateTime.now()
+        createdAt = LocalDateTime.ofInstant(
+            Instant.ofEpochMilli(createdAt),
+            ZoneId.systemDefault()
+        )
     )
 
     companion object {
@@ -129,7 +134,12 @@ data class SettlementMemberEntity(
         amount = amount,
         excludeFood = excludeFood,
         isPaid = isPaid,
-        paidAt = paidAt?.let { LocalDateTime.now() }
+        paidAt = paidAt?.let {
+            LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(it),
+                ZoneId.systemDefault()
+            )
+        }
     )
 
     companion object {

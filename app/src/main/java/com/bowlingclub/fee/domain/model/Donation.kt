@@ -20,17 +20,32 @@ data class Donation(
     val createdAt: LocalDateTime = LocalDateTime.now()
 )
 
-enum class DonorType(val displayName: String) {
-    MEMBER("회원"),
-    EXTERNAL("외부")
+enum class DonorType(val dbValue: String, val displayName: String) {
+    MEMBER("member", "회원"),
+    EXTERNAL("external", "외부");
+
+    companion object {
+        fun fromDbValue(value: String): DonorType =
+            entries.find { it.dbValue == value } ?: MEMBER
+    }
 }
 
-enum class DonationType(val displayName: String) {
-    MONEY("금액"),
-    ITEM("물품")
+enum class DonationType(val dbValue: String, val displayName: String) {
+    MONEY("money", "현금"),
+    ITEM("item", "물품");
+
+    companion object {
+        fun fromDbValue(value: String): DonationType =
+            entries.find { it.dbValue == value } ?: MONEY
+    }
 }
 
-enum class DonationStatus(val displayName: String) {
-    AVAILABLE("보유중"),
-    USED("사용완료")
+enum class DonationStatus(val dbValue: String, val displayName: String) {
+    AVAILABLE("available", "보유중"),
+    USED("used", "사용완료");
+
+    companion object {
+        fun fromDbValue(value: String): DonationStatus =
+            entries.find { it.dbValue == value } ?: AVAILABLE
+    }
 }
