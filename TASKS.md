@@ -268,21 +268,21 @@ Phase 5: 테스트 및 배포
   - [x] ScoreScreen → MeetingFormScreen
   - [x] ScoreScreen → ScoreInputScreen
 
-### 3.2 통계 및 랭킹
-- [ ] 통계 관련 UseCase 구현
+### 3.2 통계 및 랭킹 ✅ (2026-01-13)
+- [ ] 통계 관련 UseCase 구현 (추후)
   - [ ] GetMemberStatsUseCase
   - [ ] GetRankingsUseCase
   - [ ] GetMonthlyMVPUseCase
-- [ ] 개인 통계 표시
+- [ ] 개인 통계 표시 (추후)
   - [ ] 에버리지 (최근 12게임)
   - [ ] 하이게임/로우게임
   - [ ] 총 게임 수
   - [ ] 점수 추이 그래프 (Vico)
-- [ ] 랭킹 화면 (RankingScreen)
-  - [ ] 에버리지 랭킹
-  - [ ] 하이게임 랭킹
-  - [ ] 월간 MVP
-  - [ ] 성장왕
+- [x] 랭킹 화면 (ScoreScreen 랭킹 탭)
+  - [x] 에버리지 랭킹
+  - [x] 하이게임 랭킹
+  - [x] 월간 MVP
+  - [x] 성장왕
 
 ### 3.3 핸디캡 시스템
 - [ ] 핸디캡 계산 UseCase 구현
@@ -405,10 +405,10 @@ Phase 5: 테스트 및 배포
 |-------|---------|------|--------|
 | Phase 1 | 25 | 22 | 88% |
 | Phase 2 | 48 | 48 | 100% |
-| Phase 3 | 28 | 16 | 57% |
+| Phase 3 | 28 | 20 | 71% |
 | Phase 4 | 25 | 0 | 0% |
 | Phase 5 | 20 | 1 | 5% |
-| **총계** | **146** | **87** | **60%** |
+| **총계** | **146** | **91** | **62%** |
 
 ---
 
@@ -440,3 +440,4 @@ Phase 5: 테스트 및 배포
 | 1.4 | 2026-01-12 | Claude | Phase 2.3 장부 관리 완료 - AccountViewModel, AccountScreen, AccountFormScreen, 네비게이션 연결, 코드 리뷰 이슈 수정 |
 | 1.5 | 2026-01-12 | Claude | Phase 2.5 홈 대시보드 완료 - 실데이터 연동, 빠른 메뉴 네비게이션, 랭킹 연동, getTransactionIcon 공통화 |
 | 1.6 | 2026-01-12 | Claude | Phase 3.1 모임/점수 관리 완료 - ScoreViewModel, MeetingFormScreen, ScoreInputScreen, 네비게이션 연결 |
+| 1.7 | 2026-01-13 | Claude | Phase 3.2 통계 및 랭킹 완료 - 에버리지/하이게임/성장왕 랭킹, 월간 MVP |

@@ -119,10 +119,70 @@ interface ScoreDao {
         LIMIT :limit
     """)
     suspend fun getTopAverageRankings(limit: Int): List<MemberAverageRanking>
+
+    @Query("""
+        SELECT s.member_id, m.name, MAX(s.score) as high_game
+        FROM scores s
+        INNER JOIN members m ON s.member_id = m.id
+        WHERE m.status = 'active'
+        GROUP BY s.member_id
+        ORDER BY high_game DESC
+        LIMIT :limit
+    """)
+    suspend fun getTopHighGameRankings(limit: Int): List<MemberHighGameRanking>
+
+    @Query("""
+        SELECT s.member_id, m.name,
+               AVG(s.score) as current_average,
+               COUNT(s.id) as total_games,
+               (AVG(s.score) - COALESCE(m.initial_average, 0)) as growth_amount
+        FROM scores s
+        INNER JOIN members m ON s.member_id = m.id
+        WHERE m.status = 'active'
+        GROUP BY s.member_id
+        HAVING total_games >= 10
+        ORDER BY growth_amount DESC
+        LIMIT :limit
+    """)
+    suspend fun getTopGrowthRankings(limit: Int): List<MemberGrowthRanking>
+
+    @Query("""
+        SELECT s.member_id, m.name, AVG(s.score) as average, COUNT(s.id) as game_count
+        FROM scores s
+        INNER JOIN meetings mt ON s.meeting_id = mt.id
+        INNER JOIN members m ON s.member_id = m.id
+        WHERE mt.date >= :startDate AND mt.date <= :endDate AND m.status = 'active'
+        GROUP BY s.member_id
+        HAVING game_count >= :minGames
+        ORDER BY average DESC
+        LIMIT 1
+    """)
+    suspend fun getMonthlyMVP(startDate: Long, endDate: Long, minGames: Int = 3): MemberMonthlyMVP?
 }
 
 data class MemberAverageRanking(
     val member_id: Long,
     val name: String,
     val average: Double
+)
+
+data class MemberHighGameRanking(
+    val member_id: Long,
+    val name: String,
+    val high_game: Int
+)
+
+data class MemberGrowthRanking(
+    val member_id: Long,
+    val name: String,
+    val current_average: Double,
+    val total_games: Int,
+    val growth_amount: Double
+)
+
+data class MemberMonthlyMVP(
+    val member_id: Long,
+    val name: String,
+    val average: Double,
+    val game_count: Int
 )

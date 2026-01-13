@@ -14,11 +14,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -50,7 +56,9 @@ import com.bowlingclub.fee.ui.theme.Gray200
 import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
+import com.bowlingclub.fee.ui.theme.Success
 import com.bowlingclub.fee.ui.theme.Warning
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -138,7 +146,12 @@ fun ScoreScreen(
                             dateFormatter = dateFormatter,
                             onMeetingClick = onMeetingClick
                         )
-                        1 -> RankingListContent(rankings = uiState.rankings)
+                        1 -> RankingTabContent(
+                            averageRankings = uiState.rankings,
+                            highGameRankings = uiState.highGameRankings,
+                            growthRankings = uiState.growthRankings,
+                            monthlyMVP = uiState.monthlyMVP
+                        )
                         2 -> TeamMatchContent()
                     }
                 }
@@ -254,34 +267,121 @@ private fun MeetingCard(
     }
 }
 
+enum class RankingType(val label: String) {
+    AVERAGE("에버리지"),
+    HIGH_GAME("하이게임"),
+    GROWTH("성장왕")
+}
+
 @Composable
-private fun RankingListContent(rankings: List<RankingData>) {
-    if (rankings.isEmpty()) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+private fun RankingTabContent(
+    averageRankings: List<RankingData>,
+    highGameRankings: List<HighGameRankingData>,
+    growthRankings: List<GrowthRankingData>,
+    monthlyMVP: MonthlyMVPData?
+) {
+    var selectedRankingType by remember { mutableIntStateOf(0) }
+    val rankingTypes = RankingType.entries
+
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState())
+    ) {
+        // Monthly MVP Card
+        if (monthlyMVP != null) {
+            MonthlyMVPCard(mvp = monthlyMVP)
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // Ranking Type Filter
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "🏆",
-                    style = MaterialTheme.typography.displayLarge
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "랭킹 정보가 없습니다",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Gray500
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "점수를 입력하면 랭킹이 표시됩니다",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Gray400
+            rankingTypes.forEachIndexed { index, type ->
+                FilterChip(
+                    selected = selectedRankingType == index,
+                    onClick = { selectedRankingType = index },
+                    label = { Text(type.label) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Primary,
+                        selectedLabelColor = Color.White
+                    )
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Ranking List
+        when (rankingTypes[selectedRankingType]) {
+            RankingType.AVERAGE -> AverageRankingList(rankings = averageRankings)
+            RankingType.HIGH_GAME -> HighGameRankingList(rankings = highGameRankings)
+            RankingType.GROWTH -> GrowthRankingList(rankings = growthRankings)
+        }
+    }
+}
+
+@Composable
+private fun MonthlyMVPCard(mvp: MonthlyMVPData) {
+    val currentMonth = LocalDate.now().monthValue
+
+    AppCard {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Warning.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = null,
+                        tint = Warning,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "${currentMonth}월 MVP",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Warning
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = mvp.name,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = String.format("%.1f", mvp.average),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Primary
+                    )
+                    Text(
+                        text = "${mvp.gameCount}게임",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Gray500
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AverageRankingList(rankings: List<RankingData>) {
+    if (rankings.isEmpty()) {
+        EmptyRankingContent()
     } else {
         AppCard {
             Column {
@@ -292,6 +392,104 @@ private fun RankingListContent(rankings: List<RankingData>) {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun HighGameRankingList(rankings: List<HighGameRankingData>) {
+    if (rankings.isEmpty()) {
+        EmptyRankingContent()
+    } else {
+        AppCard {
+            Column {
+                rankings.forEachIndexed { index, ranking ->
+                    HighGameRankingItem(ranking = ranking)
+                    if (index < rankings.lastIndex) {
+                        HorizontalDivider(color = Gray200)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GrowthRankingList(rankings: List<GrowthRankingData>) {
+    if (rankings.isEmpty()) {
+        EmptyGrowthRankingContent()
+    } else {
+        AppCard {
+            Column {
+                rankings.forEachIndexed { index, ranking ->
+                    GrowthRankingItem(ranking = ranking)
+                    if (index < rankings.lastIndex) {
+                        HorizontalDivider(color = Gray200)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyRankingContent() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "🏆",
+                style = MaterialTheme.typography.displayLarge
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "랭킹 정보가 없습니다",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Gray500
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "점수를 입력하면 랭킹이 표시됩니다",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Gray400
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyGrowthRankingContent() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "📈",
+                style = MaterialTheme.typography.displayLarge
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "성장왕 랭킹이 없습니다",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Gray500
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "10게임 이상 플레이한 회원이 표시됩니다",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Gray400
+            )
         }
     }
 }
@@ -356,6 +554,120 @@ private fun RankingListItem(ranking: RankingData) {
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = Primary
+        )
+    }
+}
+
+@Composable
+private fun HighGameRankingItem(ranking: HighGameRankingData) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Rank
+        Box(
+            modifier = Modifier.width(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (ranking.rank <= 3) {
+                Icon(
+                    Icons.Default.EmojiEvents,
+                    contentDescription = null,
+                    tint = when (ranking.rank) {
+                        1 -> Warning
+                        2 -> Gray400
+                        else -> Color(0xFFCD7F32)
+                    },
+                    modifier = Modifier.size(24.dp)
+                )
+            } else {
+                Text(
+                    text = "${ranking.rank}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Gray400
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Name
+        Text(
+            text = ranking.name,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f)
+        )
+
+        // High Game
+        Text(
+            text = "${ranking.highGame}",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Primary
+        )
+    }
+}
+
+@Composable
+private fun GrowthRankingItem(ranking: GrowthRankingData) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Rank
+        Box(
+            modifier = Modifier.width(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (ranking.rank <= 3) {
+                Icon(
+                    Icons.AutoMirrored.Filled.TrendingUp,
+                    contentDescription = null,
+                    tint = when (ranking.rank) {
+                        1 -> Success
+                        2 -> Success.copy(alpha = 0.7f)
+                        else -> Success.copy(alpha = 0.5f)
+                    },
+                    modifier = Modifier.size(24.dp)
+                )
+            } else {
+                Text(
+                    text = "${ranking.rank}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Gray400
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Name and games
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = ranking.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "${ranking.totalGames}게임 • AVG ${String.format("%.1f", ranking.currentAverage)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = Gray500
+            )
+        }
+
+        // Growth Amount
+        Text(
+            text = "+${String.format("%.1f", ranking.growthAmount)}",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Success
         )
     }
 }

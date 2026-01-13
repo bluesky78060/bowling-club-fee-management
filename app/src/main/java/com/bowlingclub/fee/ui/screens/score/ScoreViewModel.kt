@@ -28,9 +28,35 @@ data class RankingData(
     val change: Int = 0
 )
 
+data class HighGameRankingData(
+    val rank: Int,
+    val memberId: Long,
+    val name: String,
+    val highGame: Int
+)
+
+data class GrowthRankingData(
+    val rank: Int,
+    val memberId: Long,
+    val name: String,
+    val currentAverage: Double,
+    val totalGames: Int,
+    val growthAmount: Double
+)
+
+data class MonthlyMVPData(
+    val memberId: Long,
+    val name: String,
+    val average: Double,
+    val gameCount: Int
+)
+
 data class ScoreUiState(
     val meetings: List<MeetingWithStats> = emptyList(),
     val rankings: List<RankingData> = emptyList(),
+    val highGameRankings: List<HighGameRankingData> = emptyList(),
+    val growthRankings: List<GrowthRankingData> = emptyList(),
+    val monthlyMVP: MonthlyMVPData? = null,
     val activeMembers: List<Member> = emptyList(),
     val selectedMeeting: Meeting? = null,
     val meetingScores: List<Score> = emptyList(),
@@ -59,22 +85,30 @@ class ScoreViewModel @Inject constructor(
         dataJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            // Load rankings
-            val rankings = loadRankings()
-
-            // Combine meetings with stats and active members in a single query
+            // Combine meetings with stats and active members
             combine(
                 scoreRepository.getAllMeetingsWithStats(),
                 memberRepository.getMembersByStatus(MemberStatus.ACTIVE)
             ) { meetingsWithStats, members ->
-                ScoreUiState(
-                    meetings = meetingsWithStats,
-                    rankings = rankings,
-                    activeMembers = members,
-                    isLoading = false
-                )
-            }.collect { state ->
-                _uiState.update { state }
+                Pair(meetingsWithStats, members)
+            }.collect { (meetingsWithStats, members) ->
+                // Load rankings when data changes
+                val rankings = loadRankings()
+                val highGameRankings = loadHighGameRankings()
+                val growthRankings = loadGrowthRankings()
+                val monthlyMVP = loadMonthlyMVP()
+
+                _uiState.update {
+                    it.copy(
+                        meetings = meetingsWithStats,
+                        rankings = rankings,
+                        highGameRankings = highGameRankings,
+                        growthRankings = growthRankings,
+                        monthlyMVP = monthlyMVP,
+                        activeMembers = members,
+                        isLoading = false
+                    )
+                }
             }
         }
     }
@@ -92,6 +126,62 @@ class ScoreViewModel @Inject constructor(
             } ?: emptyList()
         } else {
             emptyList()
+        }
+    }
+
+    private suspend fun loadHighGameRankings(): List<HighGameRankingData> {
+        val result = scoreRepository.getTopHighGameRankings(20)
+        return if (result.isSuccess) {
+            result.getOrNull()?.mapIndexed { index, ranking ->
+                HighGameRankingData(
+                    rank = index + 1,
+                    memberId = ranking.member_id,
+                    name = ranking.name,
+                    highGame = ranking.high_game
+                )
+            } ?: emptyList()
+        } else {
+            emptyList()
+        }
+    }
+
+    private suspend fun loadGrowthRankings(): List<GrowthRankingData> {
+        val result = scoreRepository.getTopGrowthRankings(20)
+        return if (result.isSuccess) {
+            result.getOrNull()?.mapIndexed { index, ranking ->
+                GrowthRankingData(
+                    rank = index + 1,
+                    memberId = ranking.member_id,
+                    name = ranking.name,
+                    currentAverage = ranking.current_average,
+                    totalGames = ranking.total_games,
+                    growthAmount = ranking.growth_amount
+                )
+            } ?: emptyList()
+        } else {
+            emptyList()
+        }
+    }
+
+    private suspend fun loadMonthlyMVP(): MonthlyMVPData? {
+        val now = LocalDate.now()
+        val startOfMonth = now.withDayOfMonth(1)
+        val endOfMonth = now.withDayOfMonth(now.lengthOfMonth())
+        val result = scoreRepository.getMonthlyMVP(
+            startDate = startOfMonth.toEpochDay(),
+            endDate = endOfMonth.toEpochDay()
+        )
+        return if (result.isSuccess) {
+            result.getOrNull()?.let { mvp ->
+                MonthlyMVPData(
+                    memberId = mvp.member_id,
+                    name = mvp.name,
+                    average = mvp.average,
+                    gameCount = mvp.game_count
+                )
+            }
+        } else {
+            null
         }
     }
 

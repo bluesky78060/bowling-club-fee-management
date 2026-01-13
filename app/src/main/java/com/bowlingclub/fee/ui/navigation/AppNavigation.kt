@@ -202,7 +202,8 @@ fun AppNavigation() {
                             launchSingleTop = true
                             restoreState = true
                         }
-                    }
+                    },
+                    onNavigateToMeeting = { navController.navigate(Screen.MEETING_ADD) }
                 )
             }
 
@@ -373,8 +374,8 @@ fun AppNavigation() {
             }
 
             composable(Screen.MEETING_ADD) {
-                val parentEntry = navController.getBackStackEntry(BottomNavItem.Score.route)
-                val viewModel: ScoreViewModel = hiltViewModel(parentEntry)
+                // Use independent ViewModel to support navigation from Home screen
+                val viewModel: ScoreViewModel = hiltViewModel()
 
                 MeetingFormScreen(
                     meeting = null,
