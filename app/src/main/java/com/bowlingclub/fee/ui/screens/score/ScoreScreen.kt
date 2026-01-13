@@ -65,7 +65,8 @@ import java.time.format.DateTimeFormatter
 fun ScoreScreen(
     viewModel: ScoreViewModel = hiltViewModel(),
     onAddMeeting: () -> Unit = {},
-    onMeetingClick: (Meeting) -> Unit = {}
+    onMeetingClick: (Meeting) -> Unit = {},
+    onTeamMatchClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -152,7 +153,7 @@ fun ScoreScreen(
                             growthRankings = uiState.growthRankings,
                             monthlyMVP = uiState.monthlyMVP
                         )
-                        2 -> TeamMatchContent()
+                        2 -> TeamMatchContent(onNavigateToTeam = onTeamMatchClick)
                     }
                 }
             }
@@ -673,7 +674,7 @@ private fun GrowthRankingItem(ranking: GrowthRankingData) {
 }
 
 @Composable
-private fun TeamMatchContent() {
+private fun TeamMatchContent(onNavigateToTeam: () -> Unit) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -687,16 +688,19 @@ private fun TeamMatchContent() {
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "팀전 기록이 없습니다",
+                text = "팀전 관리",
                 style = MaterialTheme.typography.bodyLarge,
                 color = Gray500
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "새 팀전을 시작해보세요",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Gray400
-            )
+            Spacer(modifier = Modifier.height(16.dp))
+            androidx.compose.material3.Button(
+                onClick = onNavigateToTeam,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = Primary
+                )
+            ) {
+                Text("팀전 관리로 이동")
+            }
         }
     }
 }

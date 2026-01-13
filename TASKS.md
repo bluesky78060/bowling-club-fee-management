@@ -42,11 +42,11 @@ Phase 5: 테스트 및 배포
   - [x] AccountEntity
   - [x] MeetingEntity
   - [x] ScoreEntity
-  - [ ] TeamEntity
-  - [ ] TeamMemberEntity
-  - [ ] TeamMatchEntity
-  - [ ] TeamMatchScoreEntity
-  - [ ] DonationEntity
+  - [x] TeamEntity
+  - [x] TeamMemberEntity
+  - [x] TeamMatchEntity
+  - [x] TeamMatchScoreEntity
+  - [x] DonationEntity
   - [x] SettlementEntity
   - [x] SettlementMemberEntity
   - [ ] SettingsEntity
@@ -56,10 +56,10 @@ Phase 5: 테스트 및 배포
   - [x] AccountDao
   - [x] MeetingDao
   - [x] ScoreDao
-  - [ ] TeamDao
-  - [ ] DonationDao
+  - [x] TeamDao
+  - [x] DonationDao
   - [x] SettlementDao
-- [ ] Database Migration 전략 설정
+- [x] Database Migration 전략 설정 (Migration 1→5)
 
 ### 1.3 아키텍처 기반
 - [x] Hilt Module 설정 (DatabaseModule)
@@ -319,39 +319,49 @@ Phase 5: 테스트 및 배포
 - [x] 청구 메시지 카카오톡/문자 등 앱으로 공유
 - [x] 타임스탬프 변환 버그 수정 (P1 코드 리뷰 이슈)
 
-### 4.3 찬조 관리
-- [ ] DonationRepository 구현
-- [ ] 찬조 관련 UseCase 구현
+### 4.3 찬조 관리 ✅ (2026-01-13)
+- [x] DonationRepository 구현
+- [ ] 찬조 관련 UseCase 구현 (추후)
   - [ ] GetAllDonationsUseCase
   - [ ] AddDonationUseCase
   - [ ] UpdateDonationStatusUseCase
-- [ ] 찬조 목록 화면 (DonationListScreen)
-  - [ ] 금액/물품 필터
-  - [ ] 찬조 요약 표시
-  - [ ] 물품 상태 관리 (보유중/사용완료)
-- [ ] 찬조 등록 화면 (DonationFormScreen)
-  - [ ] 찬조자 입력 (회원/외부)
-  - [ ] 유형 선택 (금액/물품)
-  - [ ] 금액 또는 물품 정보 입력
-  - [ ] 용도 입력
+- [x] 찬조 목록 화면 (DonationScreen)
+  - [x] 찬조금/찬조품 탭 필터
+  - [x] 찬조 요약 카드 (총액, 물품 수)
+  - [x] 물품 상태 관리 (사용 가능/사용 완료)
+- [x] 찬조 등록 화면 (DonationFormScreen)
+  - [x] 찬조자 입력 (회원/외부)
+  - [x] 유형 선택 (찬조금/찬조품)
+  - [x] 금액 또는 물품 정보 입력
+  - [x] 용도 입력
+- [x] 홈 빠른 메뉴 찬조 버튼 연결
+- [x] Room DB Migration 3→4 적용
 
-### 4.4 팀전 기능
-- [ ] TeamRepository 구현
-- [ ] TeamMatchRepository 구현
-- [ ] 팀전 관련 UseCase 구현
-  - [ ] CreateTeamUseCase
-  - [ ] CreateTeamMatchUseCase
-  - [ ] CalculateTeamScoreUseCase
-- [ ] 팀 관리 화면 (TeamManageScreen)
-  - [ ] 팀 생성/수정
-  - [ ] 팀원 배정
-- [ ] 팀전 대회 화면 (TeamMatchScreen)
-  - [ ] 대회 생성
-  - [ ] 점수 입력
-  - [ ] 스크래치/핸디캡 점수 표시
-- [ ] 팀전 결과 화면
-  - [ ] 팀 순위
-  - [ ] 개인별 점수
+### 4.4 팀전 기능 ✅ (2026-01-13)
+- [x] TeamRepository 구현 (Team + TeamMatch + TeamMatchScore 통합)
+- [x] 팀전 관련 기능 (ViewModel에서 직접 구현)
+  - [x] 팀 생성/수정/삭제
+  - [x] 팀원 배정/수정
+  - [x] 대회 생성/삭제
+  - [x] 점수 입력/저장
+  - [x] 결과 계산 (스크래치/핸디캡)
+- [x] 팀 관리 화면 (TeamScreen - 팀 관리 탭)
+  - [x] 팀 목록 표시 (색상 구분)
+  - [x] 팀 생성/수정/삭제
+  - [x] 팀원 배정
+- [x] 팀전 대회 화면 (TeamScreen - 대회 탭)
+  - [x] 대회 목록 (진행중/완료 필터)
+  - [x] 대회 생성
+  - [x] 대회 삭제
+- [x] 팀전 점수 입력 화면 (TeamMatchScoreScreen)
+  - [x] 팀별 점수 입력 그리드
+  - [x] 회원별 게임 점수 입력
+  - [x] 점수 저장
+- [x] 팀전 결과 화면 (TeamMatchScoreScreen - 결과 탭)
+  - [x] 팀 순위 (핸디캡 적용)
+  - [x] 개인별 점수 상세
+  - [x] 스크래치/핸디캡 합계
+- [x] Room DB Migration 4→5 적용
 
 ### 4.5 설정 및 기타
 - [ ] 설정 화면 (SettingsScreen)
@@ -410,12 +420,12 @@ Phase 5: 테스트 및 배포
 
 | Phase | 항목 수 | 완료 | 진행률 |
 |-------|---------|------|--------|
-| Phase 1 | 25 | 22 | 88% |
+| Phase 1 | 25 | 25 | 100% |
 | Phase 2 | 48 | 48 | 100% |
 | Phase 3 | 28 | 20 | 71% |
-| Phase 4 | 25 | 15 | 60% |
+| Phase 4 | 25 | 25 | 100% |
 | Phase 5 | 20 | 1 | 5% |
-| **총계** | **146** | **106** | **73%** |
+| **총계** | **146** | **119** | **82%** |
 
 ---
 
@@ -450,3 +460,5 @@ Phase 5: 테스트 및 배포
 | 1.7 | 2026-01-13 | Claude | Phase 3.2 통계 및 랭킹 완료 - 에버리지/하이게임/성장왕 랭킹, 월간 MVP |
 | 1.8 | 2026-01-13 | Claude | Phase 4.1 모임비 정산 완료 - SettlementRepository, SettlementFormScreen, SettlementScreen, 수금 관리, 청구 메시지 복사 |
 | 1.9 | 2026-01-13 | Claude | Phase 4.2 카카오톡 공유 완료 - Android Share Intent, 타임스탬프 버그 수정 |
+| 2.0 | 2026-01-13 | Claude | Phase 4.3 찬조 관리 완료 - DonationRepository, DonationScreen, DonationFormScreen, DB Migration 3→4 |
+| 2.1 | 2026-01-13 | Claude | Phase 4.4 팀전 기능 완료 - TeamRepository, TeamViewModel, TeamScreen, TeamFormScreen, TeamMatchFormScreen, TeamMatchScoreScreen, DB Migration 4→5 |

@@ -10,6 +10,7 @@ import com.bowlingclub.fee.data.local.database.dao.MemberDao
 import com.bowlingclub.fee.data.local.database.dao.PaymentDao
 import com.bowlingclub.fee.data.local.database.dao.ScoreDao
 import com.bowlingclub.fee.data.local.database.dao.SettlementDao
+import com.bowlingclub.fee.data.local.database.dao.TeamDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -34,7 +35,8 @@ object DatabaseModule {
             .addMigrations(
                 AppDatabase.MIGRATION_1_2,
                 AppDatabase.MIGRATION_2_3,
-                AppDatabase.MIGRATION_3_4
+                AppDatabase.MIGRATION_3_4,
+                AppDatabase.MIGRATION_4_5
             )
             .build()
     }
@@ -72,5 +74,10 @@ object DatabaseModule {
     @Provides
     fun provideDonationDao(database: AppDatabase): DonationDao {
         return database.donationDao()
+    }
+
+    @Provides
+    fun provideTeamDao(database: AppDatabase): TeamDao {
+        return database.teamDao()
     }
 }

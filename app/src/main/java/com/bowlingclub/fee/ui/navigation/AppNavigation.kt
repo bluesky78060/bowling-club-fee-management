@@ -57,6 +57,11 @@ import com.bowlingclub.fee.ui.screens.settlement.SettlementViewModel
 import com.bowlingclub.fee.ui.screens.donation.DonationFormScreen
 import com.bowlingclub.fee.ui.screens.donation.DonationScreen
 import com.bowlingclub.fee.ui.screens.donation.DonationViewModel
+import com.bowlingclub.fee.ui.screens.team.TeamFormScreen
+import com.bowlingclub.fee.ui.screens.team.TeamMatchFormScreen
+import com.bowlingclub.fee.ui.screens.team.TeamMatchScoreScreen
+import com.bowlingclub.fee.ui.screens.team.TeamScreen
+import com.bowlingclub.fee.ui.screens.team.TeamViewModel
 import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
@@ -116,11 +121,18 @@ object Screen {
     const val SETTLEMENT_ADD = "settlement/add"
     const val DONATION = "donation"
     const val DONATION_ADD = "donation/add"
+    const val TEAM = "team"
+    const val TEAM_ADD = "team/add"
+    const val TEAM_EDIT = "team/edit/{teamId}"
+    const val TEAM_MATCH_ADD = "team/match/add"
+    const val TEAM_MATCH_SCORE = "team/match/{matchId}/score"
 
     fun memberEdit(memberId: Long) = "member/edit/$memberId"
     fun memberDetail(memberId: Long) = "member/detail/$memberId"
     fun accountEdit(accountId: Long) = "account/edit/$accountId"
     fun scoreInput(meetingId: Long) = "score/input/$meetingId"
+    fun teamEdit(teamId: Long) = "team/edit/$teamId"
+    fun teamMatchScore(matchId: Long) = "team/match/$matchId/score"
 }
 
 val bottomNavItems = listOf(
@@ -381,7 +393,8 @@ fun AppNavigation() {
                     onAddMeeting = { navController.navigate(Screen.MEETING_ADD) },
                     onMeetingClick = { meeting ->
                         navController.navigate(Screen.scoreInput(meeting.id))
-                    }
+                    },
+                    onTeamMatchClick = { navController.navigate(Screen.TEAM) }
                 )
             }
 
@@ -465,6 +478,79 @@ fun AppNavigation() {
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() }
                 )
+            }
+
+            // Team screens
+            composable(Screen.TEAM) {
+                val viewModel: TeamViewModel = hiltViewModel()
+                TeamScreen(
+                    viewModel = viewModel,
+                    onAddTeam = { navController.navigate(Screen.TEAM_ADD) },
+                    onEditTeam = { team -> navController.navigate(Screen.teamEdit(team.id)) },
+                    onTeamClick = { team -> navController.navigate(Screen.teamEdit(team.id)) },
+                    onAddMatch = { navController.navigate(Screen.TEAM_MATCH_ADD) },
+                    onMatchClick = { match -> navController.navigate(Screen.teamMatchScore(match.id)) },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.TEAM_ADD) {
+                val viewModel: TeamViewModel = hiltViewModel()
+                TeamFormScreen(
+                    viewModel = viewModel,
+                    team = null,
+                    onSave = { navController.popBackStack() },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Screen.TEAM_EDIT,
+                arguments = listOf(navArgument("teamId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val teamId = backStackEntry.arguments?.getLong("teamId") ?: return@composable
+                val viewModel: TeamViewModel = hiltViewModel()
+                val uiState by viewModel.uiState.collectAsState()
+
+                val team = uiState.teams.find { it.team.id == teamId }?.team
+
+                if (team != null) {
+                    TeamFormScreen(
+                        viewModel = viewModel,
+                        team = team,
+                        onSave = { navController.popBackStack() },
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+            }
+
+            composable(Screen.TEAM_MATCH_ADD) {
+                val viewModel: TeamViewModel = hiltViewModel()
+                TeamMatchFormScreen(
+                    viewModel = viewModel,
+                    match = null,
+                    onSave = { navController.popBackStack() },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Screen.TEAM_MATCH_SCORE,
+                arguments = listOf(navArgument("matchId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val matchId = backStackEntry.arguments?.getLong("matchId") ?: return@composable
+                val viewModel: TeamViewModel = hiltViewModel()
+                val uiState by viewModel.uiState.collectAsState()
+
+                val match = uiState.teamMatches.find { it.id == matchId }
+
+                if (match != null) {
+                    TeamMatchScoreScreen(
+                        viewModel = viewModel,
+                        match = match,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
     }

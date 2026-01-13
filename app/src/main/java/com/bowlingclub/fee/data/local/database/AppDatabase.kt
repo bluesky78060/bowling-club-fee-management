@@ -11,6 +11,7 @@ import com.bowlingclub.fee.data.local.database.dao.MemberDao
 import com.bowlingclub.fee.data.local.database.dao.PaymentDao
 import com.bowlingclub.fee.data.local.database.dao.ScoreDao
 import com.bowlingclub.fee.data.local.database.dao.SettlementDao
+import com.bowlingclub.fee.data.local.database.dao.TeamDao
 import com.bowlingclub.fee.data.local.database.entity.AccountEntity
 import com.bowlingclub.fee.data.local.database.entity.DonationEntity
 import com.bowlingclub.fee.data.local.database.entity.MeetingEntity
@@ -19,6 +20,10 @@ import com.bowlingclub.fee.data.local.database.entity.PaymentEntity
 import com.bowlingclub.fee.data.local.database.entity.ScoreEntity
 import com.bowlingclub.fee.data.local.database.entity.SettlementEntity
 import com.bowlingclub.fee.data.local.database.entity.SettlementMemberEntity
+import com.bowlingclub.fee.data.local.database.entity.TeamEntity
+import com.bowlingclub.fee.data.local.database.entity.TeamMatchEntity
+import com.bowlingclub.fee.data.local.database.entity.TeamMatchScoreEntity
+import com.bowlingclub.fee.data.local.database.entity.TeamMemberEntity
 
 @Database(
     entities = [
@@ -29,9 +34,13 @@ import com.bowlingclub.fee.data.local.database.entity.SettlementMemberEntity
         ScoreEntity::class,
         SettlementEntity::class,
         SettlementMemberEntity::class,
-        DonationEntity::class
+        DonationEntity::class,
+        TeamEntity::class,
+        TeamMemberEntity::class,
+        TeamMatchEntity::class,
+        TeamMatchScoreEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -42,6 +51,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun scoreDao(): ScoreDao
     abstract fun settlementDao(): SettlementDao
     abstract fun donationDao(): DonationDao
+    abstract fun teamDao(): TeamDao
 
     companion object {
         const val DATABASE_NAME = "bowling_club_db"
@@ -85,6 +95,71 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                 """)
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_donations_member_id` ON `donations` (`member_id`)")
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Create teams table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `teams` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `color` TEXT NOT NULL DEFAULT '#2196F3',
+                        `memo` TEXT NOT NULL DEFAULT '',
+                        `created_at` INTEGER NOT NULL
+                    )
+                """)
+
+                // Create team_members table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `team_members` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `team_id` INTEGER NOT NULL,
+                        `member_id` INTEGER NOT NULL,
+                        `created_at` INTEGER NOT NULL,
+                        FOREIGN KEY(`team_id`) REFERENCES `teams`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`member_id`) REFERENCES `members`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_team_members_team_id` ON `team_members` (`team_id`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_team_members_member_id` ON `team_members` (`member_id`)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_team_members_team_id_member_id` ON `team_members` (`team_id`, `member_id`)")
+
+                // Create team_matches table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `team_matches` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `match_date` INTEGER NOT NULL,
+                        `location` TEXT NOT NULL DEFAULT '',
+                        `game_count` INTEGER NOT NULL DEFAULT 3,
+                        `memo` TEXT NOT NULL DEFAULT '',
+                        `status` TEXT NOT NULL DEFAULT 'in_progress',
+                        `created_at` INTEGER NOT NULL
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_team_matches_match_date` ON `team_matches` (`match_date`)")
+
+                // Create team_match_scores table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `team_match_scores` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `team_match_id` INTEGER NOT NULL,
+                        `team_id` INTEGER NOT NULL,
+                        `member_id` INTEGER NOT NULL,
+                        `game_number` INTEGER NOT NULL,
+                        `score` INTEGER NOT NULL,
+                        `created_at` INTEGER NOT NULL,
+                        FOREIGN KEY(`team_match_id`) REFERENCES `team_matches`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`team_id`) REFERENCES `teams`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`member_id`) REFERENCES `members`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_team_match_scores_team_match_id` ON `team_match_scores` (`team_match_id`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_team_match_scores_team_id` ON `team_match_scores` (`team_id`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_team_match_scores_member_id` ON `team_match_scores` (`member_id`)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_team_match_scores_team_match_id_team_id_member_id_game_number` ON `team_match_scores` (`team_match_id`, `team_id`, `member_id`, `game_number`)")
             }
         }
     }
