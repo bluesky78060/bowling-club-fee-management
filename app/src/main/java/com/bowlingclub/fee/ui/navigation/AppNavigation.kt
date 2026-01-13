@@ -62,6 +62,8 @@ import com.bowlingclub.fee.ui.screens.team.TeamMatchFormScreen
 import com.bowlingclub.fee.ui.screens.team.TeamMatchScoreScreen
 import com.bowlingclub.fee.ui.screens.team.TeamScreen
 import com.bowlingclub.fee.ui.screens.team.TeamViewModel
+import com.bowlingclub.fee.ui.screens.settings.SettingsScreen
+import com.bowlingclub.fee.ui.screens.settings.SettingsViewModel
 import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
@@ -126,6 +128,7 @@ object Screen {
     const val TEAM_EDIT = "team/edit/{teamId}"
     const val TEAM_MATCH_ADD = "team/match/add"
     const val TEAM_MATCH_SCORE = "team/match/{matchId}/score"
+    const val SETTINGS = "settings"
 
     fun memberEdit(memberId: Long) = "member/edit/$memberId"
     fun memberDetail(memberId: Long) = "member/detail/$memberId"
@@ -227,7 +230,8 @@ fun AppNavigation() {
                     },
                     onNavigateToMeeting = { navController.navigate(Screen.MEETING_ADD) },
                     onNavigateToSettlement = { navController.navigate(Screen.SETTLEMENT) },
-                    onNavigateToDonation = { navController.navigate(Screen.DONATION) }
+                    onNavigateToDonation = { navController.navigate(Screen.DONATION) },
+                    onNavigateToSettings = { navController.navigate(Screen.SETTINGS) }
                 )
             }
 
@@ -551,6 +555,15 @@ fun AppNavigation() {
                         onBack = { navController.popBackStack() }
                     )
                 }
+            }
+
+            // Settings screen
+            composable(Screen.SETTINGS) {
+                val viewModel: SettingsViewModel = hiltViewModel()
+                SettingsScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }

@@ -51,7 +51,8 @@ fun HomeScreen(
     onNavigateToScore: () -> Unit = {},
     onNavigateToMeeting: () -> Unit = {},
     onNavigateToSettlement: () -> Unit = {},
-    onNavigateToDonation: () -> Unit = {}
+    onNavigateToDonation: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -94,7 +95,8 @@ fun HomeScreen(
             onPaymentClick = onNavigateToPayment,
             onExpenseClick = onNavigateToAccountAdd,
             onSettlementClick = onNavigateToSettlement,
-            onDonationClick = onNavigateToDonation
+            onDonationClick = onNavigateToDonation,
+            onSettingsClick = onNavigateToSettings
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -204,7 +206,8 @@ private fun QuickActionsGrid(
     onPaymentClick: () -> Unit,
     onExpenseClick: () -> Unit,
     onSettlementClick: () -> Unit,
-    onDonationClick: () -> Unit
+    onDonationClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -248,7 +251,12 @@ private fun QuickActionsGrid(
                 onClick = onDonationClick,
                 modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.weight(1f))
+            QuickActionButton(
+                icon = "⚙️",
+                label = "설정",
+                onClick = onSettingsClick,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }

@@ -363,16 +363,18 @@ Phase 5: 테스트 및 배포
   - [x] 스크래치/핸디캡 합계
 - [x] Room DB Migration 4→5 적용
 
-### 4.5 설정 및 기타
-- [ ] 설정 화면 (SettingsScreen)
-  - [ ] 동호회 이름 설정
-  - [ ] 기본 회비 금액 설정
-  - [ ] 에버리지 계산 게임 수 설정
-  - [ ] 핸디캡 상한선 설정
-- [ ] 데이터 백업/복원
-  - [ ] JSON 내보내기
-  - [ ] JSON 가져오기
-- [ ] 데이터 초기화 기능
+### 4.5 설정 및 기타 ✅ (2026-01-13)
+- [x] 설정 화면 (SettingsScreen)
+  - [x] 동호회 이름 설정
+  - [x] 기본 회비 금액 설정
+  - [x] 에버리지 계산 게임 수 설정
+  - [x] 핸디캡 상한선 설정
+- [x] 데이터 백업/복원
+  - [x] 설정 JSON 내보내기
+  - [x] 설정 JSON 가져오기
+- [x] 설정 초기화 기능
+- [x] DataStore 기반 설정 저장
+- [x] 홈 화면 설정 버튼 연결
 
 ---
 
@@ -462,3 +464,4 @@ Phase 5: 테스트 및 배포
 | 1.9 | 2026-01-13 | Claude | Phase 4.2 카카오톡 공유 완료 - Android Share Intent, 타임스탬프 버그 수정 |
 | 2.0 | 2026-01-13 | Claude | Phase 4.3 찬조 관리 완료 - DonationRepository, DonationScreen, DonationFormScreen, DB Migration 3→4 |
 | 2.1 | 2026-01-13 | Claude | Phase 4.4 팀전 기능 완료 - TeamRepository, TeamViewModel, TeamScreen, TeamFormScreen, TeamMatchFormScreen, TeamMatchScoreScreen, DB Migration 4→5 |
+| 2.2 | 2026-01-13 | Claude | Phase 4.5 설정 기능 완료 - SettingsDataStore, SettingsRepository, SettingsViewModel, SettingsScreen, 설정 내보내기/가져오기 |
