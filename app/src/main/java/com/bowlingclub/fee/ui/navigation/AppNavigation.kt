@@ -65,6 +65,7 @@ import com.bowlingclub.fee.ui.screens.team.TeamViewModel
 import com.bowlingclub.fee.ui.screens.settings.SettingsScreen
 import com.bowlingclub.fee.ui.screens.settings.SettingsViewModel
 import com.bowlingclub.fee.ui.screens.ocr.OcrScreen
+import com.bowlingclub.fee.ui.screens.receipt.ReceiptOcrScreen
 import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
@@ -131,6 +132,7 @@ object Screen {
     const val TEAM_MATCH_SCORE = "team/match/{matchId}/score"
     const val SETTINGS = "settings"
     const val OCR_SCAN = "score/ocr/{meetingId}"
+    const val RECEIPT_OCR = "receipt/ocr"
 
     fun memberEdit(memberId: Long) = "member/edit/$memberId"
     fun memberDetail(memberId: Long) = "member/detail/$memberId"
@@ -348,7 +350,8 @@ fun AppNavigation() {
                 AccountScreen(
                     viewModel = viewModel,
                     onAddAccount = { navController.navigate(Screen.ACCOUNT_ADD) },
-                    onAccountClick = { account -> navController.navigate(Screen.accountEdit(account.id)) }
+                    onAccountClick = { account -> navController.navigate(Screen.accountEdit(account.id)) },
+                    onReceiptScan = { navController.navigate(Screen.RECEIPT_OCR) }
                 )
             }
 
@@ -570,7 +573,7 @@ fun AppNavigation() {
                 )
             }
 
-            // OCR Scan screen
+            // OCR Scan screen (점수표)
             composable(
                 route = Screen.OCR_SCAN,
                 arguments = listOf(navArgument("meetingId") { type = NavType.LongType })
@@ -578,6 +581,14 @@ fun AppNavigation() {
                 val meetingId = backStackEntry.arguments?.getLong("meetingId") ?: return@composable
                 OcrScreen(
                     meetingId = meetingId,
+                    onNavigateBack = { navController.popBackStack() },
+                    onSaveSuccess = { navController.popBackStack() }
+                )
+            }
+
+            // Receipt OCR screen (영수증)
+            composable(Screen.RECEIPT_OCR) {
+                ReceiptOcrScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onSaveSuccess = { navController.popBackStack() }
                 )

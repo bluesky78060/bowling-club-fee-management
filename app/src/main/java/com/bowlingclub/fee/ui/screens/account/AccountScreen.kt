@@ -18,10 +18,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -57,19 +59,34 @@ import java.time.format.DateTimeFormatter
 fun AccountScreen(
     viewModel: AccountViewModel = hiltViewModel(),
     onAddAccount: () -> Unit = {},
-    onAccountClick: (Account) -> Unit = {}
+    onAccountClick: (Account) -> Unit = {},
+    onReceiptScan: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val dateFormatter = DateTimeFormatter.ofPattern("M/d")
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddAccount,
-                containerColor = Primary,
-                contentColor = Color.White
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "거래 추가")
+                // 영수증 스캔 버튼
+                SmallFloatingActionButton(
+                    onClick = onReceiptScan,
+                    containerColor = Success,
+                    contentColor = Color.White
+                ) {
+                    Icon(Icons.Default.CameraAlt, contentDescription = "영수증 스캔")
+                }
+                // 수동 추가 버튼
+                FloatingActionButton(
+                    onClick = onAddAccount,
+                    containerColor = Primary,
+                    contentColor = Color.White
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "거래 추가")
+                }
             }
         },
         containerColor = BackgroundSecondary
