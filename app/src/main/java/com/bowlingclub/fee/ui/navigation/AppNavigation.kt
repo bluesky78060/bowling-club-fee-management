@@ -64,6 +64,7 @@ import com.bowlingclub.fee.ui.screens.team.TeamScreen
 import com.bowlingclub.fee.ui.screens.team.TeamViewModel
 import com.bowlingclub.fee.ui.screens.settings.SettingsScreen
 import com.bowlingclub.fee.ui.screens.settings.SettingsViewModel
+import com.bowlingclub.fee.ui.screens.ocr.OcrScreen
 import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
@@ -129,6 +130,7 @@ object Screen {
     const val TEAM_MATCH_ADD = "team/match/add"
     const val TEAM_MATCH_SCORE = "team/match/{matchId}/score"
     const val SETTINGS = "settings"
+    const val OCR_SCAN = "score/ocr/{meetingId}"
 
     fun memberEdit(memberId: Long) = "member/edit/$memberId"
     fun memberDetail(memberId: Long) = "member/detail/$memberId"
@@ -136,6 +138,7 @@ object Screen {
     fun scoreInput(meetingId: Long) = "score/input/$meetingId"
     fun teamEdit(teamId: Long) = "team/edit/$teamId"
     fun teamMatchScore(matchId: Long) = "team/match/$matchId/score"
+    fun ocrScan(meetingId: Long) = "score/ocr/$meetingId"
 }
 
 val bottomNavItems = listOf(
@@ -432,7 +435,8 @@ fun AppNavigation() {
                         viewModel = viewModel,
                         meeting = meeting,
                         onSave = { navController.popBackStack() },
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onOcrScan = { navController.navigate(Screen.ocrScan(meetingId)) }
                     )
                 }
             }
@@ -563,6 +567,19 @@ fun AppNavigation() {
                 SettingsScreen(
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() }
+                )
+            }
+
+            // OCR Scan screen
+            composable(
+                route = Screen.OCR_SCAN,
+                arguments = listOf(navArgument("meetingId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val meetingId = backStackEntry.arguments?.getLong("meetingId") ?: return@composable
+                OcrScreen(
+                    meetingId = meetingId,
+                    onNavigateBack = { navController.popBackStack() },
+                    onSaveSuccess = { navController.popBackStack() }
                 )
             }
         }

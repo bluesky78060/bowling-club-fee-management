@@ -23,6 +23,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
@@ -87,7 +88,8 @@ fun ScoreInputScreen(
     viewModel: ScoreViewModel = hiltViewModel(),
     meeting: Meeting,
     onSave: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOcrScan: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val dateFormatter = DateTimeFormatter.ofPattern("M/d")
@@ -119,6 +121,11 @@ fun ScoreInputScreen(
                     }
                 },
                 actions = {
+                    if (onOcrScan != null) {
+                        IconButton(onClick = onOcrScan) {
+                            Icon(Icons.Default.CameraAlt, contentDescription = "점수표 스캔", tint = Primary)
+                        }
+                    }
                     IconButton(onClick = { showMemberDialog = true }) {
                         Icon(Icons.Default.PersonAdd, contentDescription = "회원 추가", tint = Primary)
                     }
