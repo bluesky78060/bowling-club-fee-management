@@ -235,7 +235,10 @@ fun SettlementScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(settlements) { settlementDetails ->
+                    items(
+                        items = settlements,
+                        key = { it.settlement.id }
+                    ) { settlementDetails ->
                         SettlementCard(
                             details = settlementDetails,
                             onClick = { viewModel.selectSettlement(settlementDetails.settlement) }

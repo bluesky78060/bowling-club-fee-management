@@ -241,7 +241,10 @@ fun DonationScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(donations) { donation ->
+                    items(
+                        items = donations,
+                        key = { it.id }
+                    ) { donation ->
                         DonationCard(
                             donation = donation,
                             onClick = { viewModel.selectDonation(donation) }
