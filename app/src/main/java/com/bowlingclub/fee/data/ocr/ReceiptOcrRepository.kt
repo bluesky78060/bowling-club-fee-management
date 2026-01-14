@@ -21,8 +21,16 @@ class ReceiptOcrRepository @Inject constructor(
     private val receiptParser: ReceiptParser,
     private val imagePreprocessor: ImagePreprocessor
 ) {
-    private val textRecognizer: TextRecognizer by lazy {
-        TextRecognition.getClient(KoreanTextRecognizerOptions.Builder().build())
+    @Volatile
+    private var textRecognizer: TextRecognizer? = null
+    private val lock = Any()
+
+    private fun getOrCreateRecognizer(): TextRecognizer {
+        return textRecognizer ?: synchronized(lock) {
+            textRecognizer ?: TextRecognition.getClient(
+                KoreanTextRecognizerOptions.Builder().build()
+            ).also { textRecognizer = it }
+        }
     }
 
     /**
@@ -30,8 +38,9 @@ class ReceiptOcrRepository @Inject constructor(
      */
     suspend fun recognizeReceipt(bitmap: Bitmap): Result<ReceiptResult> = withContext(Dispatchers.IO) {
         runCatching {
+            val recognizer = getOrCreateRecognizer()
             val inputImage = InputImage.fromBitmap(bitmap, 0)
-            val visionText = textRecognizer.process(inputImage).await()
+            val visionText = recognizer.process(inputImage).await()
 
             val confidence = calculateConfidence(visionText)
             receiptParser.parse(visionText.text, confidence)
@@ -44,20 +53,26 @@ class ReceiptOcrRepository @Inject constructor(
     suspend fun recognizeReceiptWithPreprocessing(
         bitmap: Bitmap
     ): Result<ReceiptResult> = withContext(Dispatchers.IO) {
-        runCatching {
-            // 이미지 전처리 (그레이스케일, 대비 향상)
-            val processedBitmap = imagePreprocessor.preprocess(bitmap)
+        var processedBitmap: Bitmap? = null
+        try {
+            runCatching {
+                val recognizer = getOrCreateRecognizer()
+                // 이미지 전처리 (그레이스케일, 대비 향상)
+                processedBitmap = imagePreprocessor.preprocess(bitmap)
 
-            val inputImage = InputImage.fromBitmap(processedBitmap, 0)
-            val visionText = textRecognizer.process(inputImage).await()
+                val inputImage = InputImage.fromBitmap(processedBitmap!!, 0)
+                val visionText = recognizer.process(inputImage).await()
 
-            // 처리된 비트맵 메모리 해제
-            if (processedBitmap != bitmap) {
-                processedBitmap.recycle()
+                val confidence = calculateConfidence(visionText)
+                receiptParser.parse(visionText.text, confidence)
             }
-
-            val confidence = calculateConfidence(visionText)
-            receiptParser.parse(visionText.text, confidence)
+        } finally {
+            // 처리된 비트맵 메모리 해제
+            processedBitmap?.let { processed ->
+                if (processed != bitmap && !processed.isRecycled) {
+                    processed.recycle()
+                }
+            }
         }
     }
 
@@ -85,6 +100,9 @@ class ReceiptOcrRepository @Inject constructor(
      * 리소스 정리
      */
     fun close() {
-        textRecognizer.close()
+        synchronized(lock) {
+            textRecognizer?.close()
+            textRecognizer = null
+        }
     }
 }

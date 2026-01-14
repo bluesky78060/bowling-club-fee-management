@@ -17,20 +17,47 @@ class ImagePreprocessor @Inject constructor() {
 
     /**
      * 전체 전처리 파이프라인
+     * 중간 단계 비트맵을 적절히 해제하여 메모리 효율성 보장
      */
     fun preprocess(bitmap: Bitmap): Bitmap {
-        var result = bitmap
+        var current = bitmap
+        var previous: Bitmap? = null
 
-        // 1. 리사이즈 (너무 크면 처리 시간 증가)
-        result = resizeIfNeeded(result, MAX_DIMENSION)
+        try {
+            // 1. 리사이즈 (너무 크면 처리 시간 증가)
+            val resized = resizeIfNeeded(current, MAX_DIMENSION)
+            if (resized != current) {
+                // 리사이즈된 경우에만 이전 비트맵 추적
+                previous = current
+                current = resized
+            }
 
-        // 2. 그레이스케일 변환
-        result = toGrayscale(result)
+            // 2. 그레이스케일 변환
+            val grayscale = toGrayscale(current)
+            // 이전 단계 비트맵 해제 (원본은 제외)
+            if (current != bitmap) {
+                current.recycle()
+            }
+            previous?.let { if (it != bitmap && !it.isRecycled) it.recycle() }
+            previous = null
+            current = grayscale
 
-        // 3. 대비 향상
-        result = enhanceContrast(result)
+            // 3. 대비 향상
+            val enhanced = enhanceContrast(current)
+            // 그레이스케일 비트맵 해제
+            if (!current.isRecycled) {
+                current.recycle()
+            }
 
-        return result
+            return enhanced
+        } catch (e: Exception) {
+            // 에러 발생 시 중간 비트맵 정리
+            if (current != bitmap && !current.isRecycled) {
+                current.recycle()
+            }
+            previous?.let { if (it != bitmap && !it.isRecycled) it.recycle() }
+            throw e
+        }
     }
 
     /**

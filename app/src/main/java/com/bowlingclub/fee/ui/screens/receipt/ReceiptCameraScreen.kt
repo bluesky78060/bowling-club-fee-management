@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.util.Log
+import androidx.camera.core.CameraControl
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -60,6 +61,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun ReceiptCameraScreen(
@@ -173,6 +175,7 @@ private fun ReceiptCameraPreviewContent(
     onNavigateBack: () -> Unit
 ) {
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
+    var cameraControl by remember { mutableStateOf<CameraControl?>(null) }
     var isFlashOn by remember { mutableStateOf(false) }
     var cameraError by remember { mutableStateOf<String?>(null) }
 
@@ -181,6 +184,13 @@ private fun ReceiptCameraPreviewContent(
     DisposableEffect(Unit) {
         onDispose {
             cameraExecutor.shutdown()
+            try {
+                if (!cameraExecutor.awaitTermination(2, TimeUnit.SECONDS)) {
+                    cameraExecutor.shutdownNow()
+                }
+            } catch (e: InterruptedException) {
+                cameraExecutor.shutdownNow()
+            }
         }
     }
 
@@ -218,12 +228,13 @@ private fun ReceiptCameraPreviewContent(
 
                     try {
                         cameraProvider.unbindAll()
-                        cameraProvider.bindToLifecycle(
+                        val camera = cameraProvider.bindToLifecycle(
                             lifecycleOwner,
                             cameraSelector,
                             preview,
                             imageCapture
                         )
+                        cameraControl = camera.cameraControl
                     } catch (e: Exception) {
                         Log.e("ReceiptCamera", "카메라 바인딩 실패", e)
                         cameraError = "카메라를 시작할 수 없습니다: ${e.localizedMessage}"
@@ -266,7 +277,10 @@ private fun ReceiptCameraPreviewContent(
                     )
 
                     IconButton(
-                        onClick = { isFlashOn = !isFlashOn }
+                        onClick = {
+                            isFlashOn = !isFlashOn
+                            cameraControl?.enableTorch(isFlashOn)
+                        }
                     ) {
                         Icon(
                             imageVector = if (isFlashOn) Icons.Default.FlashOn else Icons.Default.FlashOff,

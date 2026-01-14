@@ -2,6 +2,7 @@ package com.bowlingclub.fee.data.ocr
 
 import com.bowlingclub.fee.domain.model.ReceiptItem
 import com.bowlingclub.fee.domain.model.ReceiptResult
+import java.time.DateTimeException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -103,20 +104,27 @@ class ReceiptParser @Inject constructor() {
             }
         }
 
-        // 마지막 수단: 큰 숫자 찾기
-        val allAmounts = Regex("""([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,8})""")
+        // 마지막 수단: "원" 문자 앞의 금액 형식 숫자 찾기
+        // 카드번호, 전화번호 등과 구분하기 위해 "원" 문자가 있는 경우만 인식
+        val amountWithWon = Regex("""([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,7})\s*원""")
             .findAll(text)
-            .mapNotNull { it.value.replace(",", "").toIntOrNull() }
+            .mapNotNull { it.groupValues[1].replace(",", "").toIntOrNull() }
             .filter { it in 1000..10_000_000 }
             .toList()
 
-        return allAmounts.maxOrNull()
+        // "원" 문자가 있는 금액 중 가장 큰 값 반환
+        // 패턴 매칭 실패 시 사용자가 직접 입력하도록 null 반환
+        return amountWithWon.maxOrNull()
     }
 
     /**
      * 날짜 추출
      */
     private fun extractDate(text: String): LocalDate? {
+        val currentYear = LocalDate.now().year
+        val minYear = currentYear - 5
+        val maxYear = currentYear + 2
+
         for (pattern in DATE_PATTERNS) {
             val match = pattern.find(text)
             if (match != null) {
@@ -131,10 +139,14 @@ class ReceiptParser @Inject constructor() {
                         year += 2000
                     }
 
-                    // 유효한 날짜인지 확인
-                    if (year in 2020..2030 && month in 1..12 && day in 1..31) {
+                    // 유효한 연도 범위 확인 (현재 연도 기준 ±5년)
+                    if (year in minYear..maxYear && month in 1..12 && day in 1..31) {
+                        // LocalDate가 유효성 검증 (예: 2월 30일은 DateTimeException 발생)
                         return LocalDate.of(year, month, day)
                     }
+                } catch (e: DateTimeException) {
+                    // 유효하지 않은 날짜 (예: 2월 30일) - 다음 패턴 시도
+                    continue
                 } catch (e: Exception) {
                     continue
                 }
