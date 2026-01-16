@@ -82,6 +82,11 @@ class ScoreViewModel @Inject constructor(
     private val memberRepository: MemberRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "ScoreViewModel"
+        private const val RANKING_LIMIT = 20
+    }
+
     private val _uiState = MutableStateFlow(ScoreUiState())
     val uiState: StateFlow<ScoreUiState> = _uiState.asStateFlow()
 
@@ -134,7 +139,7 @@ class ScoreViewModel @Inject constructor(
     }
 
     private suspend fun loadRankings(): List<RankingData> {
-        val result = scoreRepository.getTopAverageRankings(20)
+        val result = scoreRepository.getTopAverageRankings(RANKING_LIMIT)
         return if (result.isSuccess) {
             result.getOrNull()?.mapIndexed { index, ranking ->
                 RankingData(
@@ -150,7 +155,7 @@ class ScoreViewModel @Inject constructor(
     }
 
     private suspend fun loadHighGameRankings(): List<HighGameRankingData> {
-        val result = scoreRepository.getTopHighGameRankings(20)
+        val result = scoreRepository.getTopHighGameRankings(RANKING_LIMIT)
         return if (result.isSuccess) {
             result.getOrNull()?.mapIndexed { index, ranking ->
                 HighGameRankingData(
@@ -166,7 +171,7 @@ class ScoreViewModel @Inject constructor(
     }
 
     private suspend fun loadGrowthRankings(): List<GrowthRankingData> {
-        val result = scoreRepository.getTopGrowthRankings(20)
+        val result = scoreRepository.getTopGrowthRankings(RANKING_LIMIT)
         return if (result.isSuccess) {
             result.getOrNull()?.mapIndexed { index, ranking ->
                 GrowthRankingData(
@@ -184,7 +189,7 @@ class ScoreViewModel @Inject constructor(
     }
 
     private suspend fun loadHandicapRankings(): List<HandicapRankingData> {
-        val result = scoreRepository.getTopHandicapRankings(20)
+        val result = scoreRepository.getTopHandicapRankings(RANKING_LIMIT)
         return if (result.isSuccess) {
             result.getOrNull()?.mapIndexed { index, ranking ->
                 HandicapRankingData(
@@ -232,7 +237,7 @@ class ScoreViewModel @Inject constructor(
                 memo = memo
             )
             val result = scoreRepository.insertMeeting(meeting)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Create meeting")) {
                 _uiState.update { it.copy(errorMessage = "모임 생성에 실패했습니다") }
             }
         }
@@ -241,8 +246,33 @@ class ScoreViewModel @Inject constructor(
     fun deleteMeeting(meeting: Meeting) {
         viewModelScope.launch {
             val result = scoreRepository.deleteMeeting(meeting)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Delete meeting")) {
                 _uiState.update { it.copy(errorMessage = "모임 삭제에 실패했습니다") }
+            }
+        }
+    }
+
+    fun updateMeetingTeamMatch(
+        meeting: Meeting,
+        isTeamMatch: Boolean,
+        winnerTeamMemberIds: Set<Long>,
+        loserTeamMemberIds: Set<Long>,
+        winnerTeamAmount: Int,
+        loserTeamAmount: Int
+    ) {
+        viewModelScope.launch {
+            val updatedMeeting = meeting.copy(
+                isTeamMatch = isTeamMatch,
+                winnerTeamMemberIds = winnerTeamMemberIds,
+                loserTeamMemberIds = loserTeamMemberIds,
+                winnerTeamAmount = winnerTeamAmount,
+                loserTeamAmount = loserTeamAmount
+            )
+            val result = scoreRepository.updateMeeting(updatedMeeting)
+            if (result.logErrorIfFailed(TAG, "Update meeting team match")) {
+                _uiState.update { it.copy(errorMessage = "팀전 설정 저장에 실패했습니다") }
+            } else {
+                _uiState.update { it.copy(selectedMeeting = updatedMeeting) }
             }
         }
     }
@@ -267,7 +297,7 @@ class ScoreViewModel @Inject constructor(
                 score = score
             )
             val result = scoreRepository.insertScore(scoreEntity)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Add score")) {
                 _uiState.update { it.copy(errorMessage = "점수 입력에 실패했습니다") }
             }
         }
@@ -282,7 +312,7 @@ class ScoreViewModel @Inject constructor(
             }
 
             val result = scoreRepository.insertScores(scores)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Add scores batch")) {
                 _uiState.update { it.copy(errorMessage = "점수 입력에 실패했습니다") }
             }
         }
@@ -291,7 +321,7 @@ class ScoreViewModel @Inject constructor(
     fun updateScore(score: Score) {
         viewModelScope.launch {
             val result = scoreRepository.updateScore(score)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Update score")) {
                 _uiState.update { it.copy(errorMessage = "점수 수정에 실패했습니다") }
             }
         }
@@ -300,7 +330,7 @@ class ScoreViewModel @Inject constructor(
     fun deleteScore(score: Score) {
         viewModelScope.launch {
             val result = scoreRepository.deleteScore(score)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Delete score")) {
                 _uiState.update { it.copy(errorMessage = "점수 삭제에 실패했습니다") }
             }
         }

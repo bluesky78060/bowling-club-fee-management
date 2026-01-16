@@ -34,6 +34,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,6 +62,18 @@ import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
 import com.bowlingclub.fee.ui.theme.Success
 import com.bowlingclub.fee.ui.theme.Warning
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.common.fill
+import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -264,6 +277,16 @@ fun MemberDetailScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Score Trend Chart Section
+            if (stats.recentScores.size >= 2) {
+                ScoreTrendChart(
+                    scores = stats.recentScores,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             // Recent Scores Section
             Card(
                 modifier = Modifier
@@ -432,5 +455,84 @@ private fun ScoreChip(score: Int) {
             fontWeight = FontWeight.SemiBold,
             color = textColor
         )
+    }
+}
+
+@Composable
+private fun ScoreTrendChart(
+    scores: List<Score>,
+    modifier: Modifier = Modifier
+) {
+    // 최근 12개 점수를 시간순으로 정렬 (오래된 것 → 최신)
+    val chartScores = remember(scores) {
+        scores.take(12).reversed()
+    }
+
+    // Chart Model Producer 생성
+    val modelProducer = remember { CartesianChartModelProducer() }
+
+    // 데이터가 변경될 때 차트 업데이트
+    LaunchedEffect(chartScores) {
+        if (chartScores.isNotEmpty()) {
+            modelProducer.runTransaction {
+                lineSeries {
+                    series(chartScores.map { it.score.toDouble() })
+                }
+            }
+        }
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "점수 추이",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            CartesianChartHost(
+                chart = rememberCartesianChart(
+                    rememberLineCartesianLayer(
+                        lineProvider = LineCartesianLayer.LineProvider.series(
+                            LineCartesianLayer.rememberLine(
+                                fill = LineCartesianLayer.LineFill.single(fill(Primary))
+                            )
+                        )
+                    ),
+                    startAxis = VerticalAxis.rememberStart(),
+                    bottomAxis = HorizontalAxis.rememberBottom()
+                ),
+                modelProducer = modelProducer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 범례 표시
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "← 오래된 게임",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Gray400
+                )
+                Text(
+                    text = "최근 게임 →",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Gray400
+                )
+            }
+        }
     }
 }

@@ -48,6 +48,13 @@ class SettingsRepository @Inject constructor(
         Result.Error(e)
     }
 
+    suspend fun updateGameFeePerGame(fee: Int): Result<Unit> = try {
+        settingsDataStore.updateGameFeePerGame(fee)
+        Result.Success(Unit)
+    } catch (e: Exception) {
+        Result.Error(e)
+    }
+
     suspend fun updateSettings(settings: AppSettings): Result<Unit> = try {
         settingsDataStore.updateSettings(settings)
         Result.Success(Unit)

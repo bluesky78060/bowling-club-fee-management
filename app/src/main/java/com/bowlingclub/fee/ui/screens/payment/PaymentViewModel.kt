@@ -39,7 +39,12 @@ data class PaymentUiState(
     val memberPayments: List<MemberPaymentData> = emptyList(),
     val totalAmount: Int = 0,
     val isLoading: Boolean = true,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    // 빠른 납부 관련 상태
+    val isQuickPaymentMode: Boolean = false,
+    val selectedMemberIds: Set<Long> = emptySet(),
+    val defaultFeeAmount: Int = 10000,
+    val successMessage: String? = null
 )
 
 @HiltViewModel
@@ -398,6 +403,215 @@ class PaymentViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    fun clearSuccessMessage() {
+        _uiState.update { it.copy(successMessage = null) }
+    }
+
+    // ========== 빠른 납부 기능 ==========
+
+    /**
+     * 빠른 납부 모드 전환
+     */
+    fun toggleQuickPaymentMode() {
+        _uiState.update {
+            it.copy(
+                isQuickPaymentMode = !it.isQuickPaymentMode,
+                selectedMemberIds = emptySet()
+            )
+        }
+    }
+
+    /**
+     * 빠른 납부 모드 종료
+     */
+    fun exitQuickPaymentMode() {
+        _uiState.update {
+            it.copy(
+                isQuickPaymentMode = false,
+                selectedMemberIds = emptySet()
+            )
+        }
+    }
+
+    /**
+     * 회원 선택/해제 토글
+     */
+    fun toggleMemberSelection(memberId: Long) {
+        _uiState.update { state ->
+            val newSelectedIds = if (memberId in state.selectedMemberIds) {
+                state.selectedMemberIds - memberId
+            } else {
+                state.selectedMemberIds + memberId
+            }
+            state.copy(selectedMemberIds = newSelectedIds)
+        }
+    }
+
+    /**
+     * 미납 회원 전체 선택
+     */
+    fun selectAllUnpaidMembers() {
+        _uiState.update { state ->
+            val unpaidMemberIds = state.unpaidMembers.map { it.id }.toSet()
+            state.copy(selectedMemberIds = unpaidMemberIds)
+        }
+    }
+
+    /**
+     * 전체 선택 해제
+     */
+    fun clearAllSelections() {
+        _uiState.update { it.copy(selectedMemberIds = emptySet()) }
+    }
+
+    /**
+     * 선택된 회원들에게 이번 달 회비 일괄 납부
+     * 이미 납부한 회원은 자동으로 건너뜀 (중복 방지)
+     * insertAll을 사용하여 일괄 삽입으로 성능 최적화
+     */
+    fun processQuickPayment(amountPerMember: Int) {
+        if (amountPerMember <= 0) {
+            _uiState.update { it.copy(errorMessage = "금액은 0보다 커야 합니다") }
+            return
+        }
+
+        val selectedIds = _uiState.value.selectedMemberIds
+        if (selectedIds.isEmpty()) {
+            _uiState.update { it.copy(errorMessage = "선택된 회원이 없습니다") }
+            return
+        }
+
+        viewModelScope.launch {
+            val currentMonth = _uiState.value.currentMonth
+            val paidMemberIds = _uiState.value.paidMembers.map { it.id }.toSet()
+
+            // 이미 납부한 회원 제외 (중복 방지)
+            val unpaidSelectedIds = selectedIds.filter { it !in paidMemberIds }
+            val skippedCount = selectedIds.size - unpaidSelectedIds.size
+
+            if (unpaidSelectedIds.isEmpty()) {
+                _uiState.update {
+                    it.copy(errorMessage = "선택한 회원 ${selectedIds.size}명 모두 이미 납부 완료되었습니다")
+                }
+                return@launch
+            }
+
+            // 일괄 삽입을 위한 Payment 리스트 생성
+            val payments = unpaidSelectedIds.map { memberId ->
+                Payment(
+                    memberId = memberId,
+                    amount = amountPerMember,
+                    paymentDate = LocalDate.now(),
+                    meetingDate = currentMonth.atDay(1)
+                )
+            }
+
+            // 일괄 삽입
+            val result = paymentRepository.insertAll(payments)
+            val successCount = if (result.isSuccess) unpaidSelectedIds.size else 0
+            val failCount = if (result.isError) unpaidSelectedIds.size else 0
+
+            // 성공 시 장부에 수입 일괄 기록
+            if (result.isSuccess) {
+                val memberPaymentsMap = _uiState.value.memberPayments.associateBy { it.member.id }
+                val accounts = unpaidSelectedIds.map { memberId ->
+                    val memberName = memberPaymentsMap[memberId]?.member?.name ?: "회원"
+                    Account(
+                        type = AccountType.INCOME,
+                        category = IncomeCategory.MEMBERSHIP_FEE,
+                        amount = amountPerMember,
+                        date = LocalDate.now(),
+                        description = "${memberName} ${currentMonth.monthValue}월 회비"
+                    )
+                }
+                accountRepository.insertAll(accounts)
+            }
+
+            // 결과 메시지 구성
+            val resultMessage = buildString {
+                append("${successCount}명 납부 완료")
+                if (skippedCount > 0) {
+                    append(" (${skippedCount}명 이미 납부됨)")
+                }
+                if (failCount > 0) {
+                    append(", ${failCount}명 실패")
+                }
+            }
+
+            _uiState.update {
+                it.copy(
+                    successMessage = if (failCount == 0) resultMessage else null,
+                    errorMessage = if (failCount > 0) resultMessage else null,
+                    isQuickPaymentMode = false,
+                    selectedMemberIds = emptySet()
+                )
+            }
+        }
+    }
+
+    /**
+     * 미납 회원 전체에게 이번 달 회비 일괄 납부 (원클릭)
+     * insertAll을 사용하여 일괄 삽입으로 성능 최적화
+     */
+    fun payAllUnpaidMembers(amountPerMember: Int) {
+        if (amountPerMember <= 0) {
+            _uiState.update { it.copy(errorMessage = "금액은 0보다 커야 합니다") }
+            return
+        }
+
+        val unpaidMembers = _uiState.value.unpaidMembers
+        if (unpaidMembers.isEmpty()) {
+            _uiState.update { it.copy(errorMessage = "미납 회원이 없습니다") }
+            return
+        }
+
+        viewModelScope.launch {
+            val currentMonth = _uiState.value.currentMonth
+
+            // 일괄 삽입을 위한 Payment 리스트 생성
+            val payments = unpaidMembers.map { member ->
+                Payment(
+                    memberId = member.id,
+                    amount = amountPerMember,
+                    paymentDate = LocalDate.now(),
+                    meetingDate = currentMonth.atDay(1)
+                )
+            }
+
+            // 일괄 삽입
+            val result = paymentRepository.insertAll(payments)
+            val successCount = if (result.isSuccess) unpaidMembers.size else 0
+            val failCount = if (result.isError) unpaidMembers.size else 0
+
+            // 성공 시 장부에 수입 일괄 기록
+            if (result.isSuccess) {
+                val accounts = unpaidMembers.map { member ->
+                    Account(
+                        type = AccountType.INCOME,
+                        category = IncomeCategory.MEMBERSHIP_FEE,
+                        amount = amountPerMember,
+                        date = LocalDate.now(),
+                        description = "${member.name} ${currentMonth.monthValue}월 회비"
+                    )
+                }
+                accountRepository.insertAll(accounts)
+            }
+
+            val resultMessage = if (failCount > 0) {
+                "${successCount}명 납부 완료, ${failCount}명 실패"
+            } else {
+                "${successCount}명 납부 완료"
+            }
+
+            _uiState.update {
+                it.copy(
+                    successMessage = if (failCount == 0) resultMessage else null,
+                    errorMessage = if (failCount > 0) resultMessage else null
+                )
+            }
+        }
     }
 
     override fun onCleared() {

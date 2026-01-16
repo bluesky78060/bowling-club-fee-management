@@ -1,5 +1,6 @@
 package com.bowlingclub.fee.ui.screens.donation
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bowlingclub.fee.data.repository.AccountRepository
@@ -46,6 +47,10 @@ class DonationViewModel @Inject constructor(
     private val memberRepository: MemberRepository,
     private val accountRepository: AccountRepository
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "DonationViewModel"
+    }
 
     private val _uiState = MutableStateFlow(DonationUiState())
     val uiState: StateFlow<DonationUiState> = _uiState.asStateFlow()
@@ -104,6 +109,10 @@ class DonationViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = "기부자 이름을 입력해주세요") }
             return
         }
+        if (donorType == DonorType.MEMBER && memberId == null) {
+            _uiState.update { it.copy(errorMessage = "회원을 선택해주세요") }
+            return
+        }
         if (amount <= 0) {
             _uiState.update { it.copy(errorMessage = "금액을 입력해주세요") }
             return
@@ -122,7 +131,7 @@ class DonationViewModel @Inject constructor(
             )
 
             val result = donationRepository.insertDonation(donation)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Insert money donation")) {
                 _uiState.update { it.copy(errorMessage = "찬조금 등록에 실패했습니다") }
             } else {
                 // 장부에 찬조금 수입 기록
@@ -134,8 +143,12 @@ class DonationViewModel @Inject constructor(
                     date = donationDate,
                     description = "${donorName} 찬조금${purposeStr}"
                 )
-                accountRepository.insert(account)
-                _uiState.update { it.copy(successMessage = "찬조금이 등록되었습니다") }
+                val accountResult = accountRepository.insert(account)
+                if (accountResult.logErrorIfFailed(TAG, "Insert account for donation")) {
+                    _uiState.update { it.copy(errorMessage = "찬조금은 등록되었으나 장부 기록에 실패했습니다") }
+                } else {
+                    _uiState.update { it.copy(successMessage = "찬조금이 등록되었습니다") }
+                }
             }
         }
     }
@@ -153,6 +166,10 @@ class DonationViewModel @Inject constructor(
     ) {
         if (donorName.isBlank()) {
             _uiState.update { it.copy(errorMessage = "기부자 이름을 입력해주세요") }
+            return
+        }
+        if (donorType == DonorType.MEMBER && memberId == null) {
+            _uiState.update { it.copy(errorMessage = "회원을 선택해주세요") }
             return
         }
         if (itemName.isBlank()) {
@@ -179,7 +196,7 @@ class DonationViewModel @Inject constructor(
             )
 
             val result = donationRepository.insertDonation(donation)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Insert item donation")) {
                 _uiState.update { it.copy(errorMessage = "찬조품 등록에 실패했습니다") }
             } else {
                 _uiState.update { it.copy(successMessage = "찬조품이 등록되었습니다") }
@@ -198,7 +215,7 @@ class DonationViewModel @Inject constructor(
     fun markItemAsUsed(donationId: Long) {
         viewModelScope.launch {
             val result = donationRepository.markAsUsed(donationId)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Mark item as used")) {
                 _uiState.update { it.copy(errorMessage = "상태 변경에 실패했습니다") }
             } else {
                 clearSelectedDonation()
@@ -210,7 +227,7 @@ class DonationViewModel @Inject constructor(
     fun markItemAsAvailable(donationId: Long) {
         viewModelScope.launch {
             val result = donationRepository.markAsAvailable(donationId)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Mark item as available")) {
                 _uiState.update { it.copy(errorMessage = "상태 변경에 실패했습니다") }
             } else {
                 clearSelectedDonation()
@@ -222,7 +239,7 @@ class DonationViewModel @Inject constructor(
     fun deleteDonation(donationId: Long) {
         viewModelScope.launch {
             val result = donationRepository.deleteDonationById(donationId)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Delete donation")) {
                 _uiState.update { it.copy(errorMessage = "삭제에 실패했습니다") }
             } else {
                 clearSelectedDonation()
@@ -234,7 +251,7 @@ class DonationViewModel @Inject constructor(
     fun updateDonation(donation: Donation) {
         viewModelScope.launch {
             val result = donationRepository.updateDonation(donation)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Update donation")) {
                 _uiState.update { it.copy(errorMessage = "수정에 실패했습니다") }
             } else {
                 clearSelectedDonation()

@@ -24,6 +24,22 @@ data class MeetingEntity(
 
     val memo: String = "",
 
+    // 팀전 관련 필드
+    @ColumnInfo(name = "is_team_match")
+    val isTeamMatch: Boolean = false,
+
+    @ColumnInfo(name = "winner_team_member_ids")
+    val winnerTeamMemberIds: String = "", // 쉼표로 구분된 ID 문자열
+
+    @ColumnInfo(name = "loser_team_member_ids")
+    val loserTeamMemberIds: String = "", // 쉼표로 구분된 ID 문자열
+
+    @ColumnInfo(name = "winner_team_amount")
+    val winnerTeamAmount: Int = 0,
+
+    @ColumnInfo(name = "loser_team_amount")
+    val loserTeamAmount: Int = 0,
+
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis()
 ) {
@@ -32,6 +48,11 @@ data class MeetingEntity(
         date = LocalDate.ofEpochDay(date),
         location = location,
         memo = memo,
+        isTeamMatch = isTeamMatch,
+        winnerTeamMemberIds = winnerTeamMemberIds.split(",").filter { it.isNotBlank() }.mapNotNull { it.toLongOrNull() }.toSet(),
+        loserTeamMemberIds = loserTeamMemberIds.split(",").filter { it.isNotBlank() }.mapNotNull { it.toLongOrNull() }.toSet(),
+        winnerTeamAmount = winnerTeamAmount,
+        loserTeamAmount = loserTeamAmount,
         createdAt = LocalDateTime.ofInstant(
             Instant.ofEpochMilli(createdAt),
             ZoneId.systemDefault()
@@ -44,6 +65,11 @@ data class MeetingEntity(
             date = meeting.date.toEpochDay(),
             location = meeting.location,
             memo = meeting.memo,
+            isTeamMatch = meeting.isTeamMatch,
+            winnerTeamMemberIds = meeting.winnerTeamMemberIds.joinToString(","),
+            loserTeamMemberIds = meeting.loserTeamMemberIds.joinToString(","),
+            winnerTeamAmount = meeting.winnerTeamAmount,
+            loserTeamAmount = meeting.loserTeamAmount,
             createdAt = if (preserveCreatedAt) {
                 meeting.createdAt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
             } else {

@@ -43,10 +43,15 @@ class TeamViewModel @Inject constructor(
     private val memberRepository: MemberRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "TeamViewModel"
+    }
+
     private val _uiState = MutableStateFlow(TeamUiState())
     val uiState: StateFlow<TeamUiState> = _uiState.asStateFlow()
 
     private var dataJob: Job? = null
+    private var teamMembersJob: Job? = null
 
     init {
         loadData()
@@ -91,7 +96,7 @@ class TeamViewModel @Inject constructor(
         viewModelScope.launch {
             val team = Team(name = name, color = color, memo = memo)
             val result = teamRepository.insertTeam(team)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Create team")) {
                 _uiState.update { it.copy(errorMessage = "팀 생성에 실패했습니다") }
             } else {
                 _uiState.update { it.copy(successMessage = "팀이 생성되었습니다") }
@@ -102,7 +107,7 @@ class TeamViewModel @Inject constructor(
     fun updateTeam(team: Team) {
         viewModelScope.launch {
             val result = teamRepository.updateTeam(team)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Update team")) {
                 _uiState.update { it.copy(errorMessage = "팀 수정에 실패했습니다") }
             } else {
                 clearSelectedTeam()
@@ -114,7 +119,7 @@ class TeamViewModel @Inject constructor(
     fun deleteTeam(teamId: Long) {
         viewModelScope.launch {
             val result = teamRepository.deleteTeam(teamId)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Delete team")) {
                 _uiState.update { it.copy(errorMessage = "팀 삭제에 실패했습니다") }
             } else {
                 clearSelectedTeam()
@@ -133,7 +138,8 @@ class TeamViewModel @Inject constructor(
     }
 
     private fun loadTeamMembers(teamId: Long) {
-        viewModelScope.launch {
+        teamMembersJob?.cancel()
+        teamMembersJob = viewModelScope.launch {
             teamRepository.getTeamMembers(teamId).collect { members ->
                 _uiState.update { it.copy(selectedTeamMembers = members) }
             }
@@ -143,7 +149,7 @@ class TeamViewModel @Inject constructor(
     fun updateTeamMembers(teamId: Long, memberIds: List<Long>) {
         viewModelScope.launch {
             val result = teamRepository.updateTeamMembers(teamId, memberIds)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Update team members")) {
                 _uiState.update { it.copy(errorMessage = "팀원 업데이트에 실패했습니다") }
             } else {
                 _uiState.update { it.copy(successMessage = "팀원이 업데이트되었습니다") }
@@ -167,7 +173,7 @@ class TeamViewModel @Inject constructor(
                 memo = memo
             )
             val result = teamRepository.insertTeamMatch(match)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Create team match")) {
                 _uiState.update { it.copy(errorMessage = "대회 생성에 실패했습니다") }
             } else {
                 _uiState.update { it.copy(successMessage = "대회가 생성되었습니다") }
@@ -178,7 +184,7 @@ class TeamViewModel @Inject constructor(
     fun updateTeamMatch(match: TeamMatch) {
         viewModelScope.launch {
             val result = teamRepository.updateTeamMatch(match)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Update team match")) {
                 _uiState.update { it.copy(errorMessage = "대회 수정에 실패했습니다") }
             } else {
                 clearSelectedMatch()
@@ -190,7 +196,7 @@ class TeamViewModel @Inject constructor(
     fun deleteTeamMatch(matchId: Long) {
         viewModelScope.launch {
             val result = teamRepository.deleteTeamMatch(matchId)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Delete team match")) {
                 _uiState.update { it.copy(errorMessage = "대회 삭제에 실패했습니다") }
             } else {
                 clearSelectedMatch()
@@ -202,7 +208,7 @@ class TeamViewModel @Inject constructor(
     fun completeTeamMatch(matchId: Long) {
         viewModelScope.launch {
             val result = teamRepository.completeTeamMatch(matchId)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Complete team match")) {
                 _uiState.update { it.copy(errorMessage = "대회 완료 처리에 실패했습니다") }
             } else {
                 _uiState.update { it.copy(successMessage = "대회가 완료되었습니다") }
@@ -237,7 +243,7 @@ class TeamViewModel @Inject constructor(
                 score = score
             )
             val result = teamRepository.insertTeamMatchScore(matchScore)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Save score")) {
                 _uiState.update { it.copy(errorMessage = "점수 저장에 실패했습니다") }
             } else {
                 loadMatchResults(matchId)
@@ -250,7 +256,7 @@ class TeamViewModel @Inject constructor(
 
         viewModelScope.launch {
             val result = teamRepository.insertTeamMatchScores(scores)
-            if (result.isError) {
+            if (result.logErrorIfFailed(TAG, "Save scores batch")) {
                 _uiState.update { it.copy(errorMessage = "점수 저장에 실패했습니다") }
             } else {
                 val matchId = scores.first().teamMatchId
@@ -275,5 +281,6 @@ class TeamViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         dataJob?.cancel()
+        teamMembersJob?.cancel()
     }
 }

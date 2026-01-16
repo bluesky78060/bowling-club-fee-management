@@ -19,7 +19,9 @@ interface MeetingDao {
     @Query("""
         SELECT m.id, m.date, m.location, m.memo, m.created_at,
                COUNT(DISTINCT s.member_id) as participant_count,
-               COUNT(s.id) as game_count
+               COUNT(s.id) as game_count,
+               m.is_team_match, m.winner_team_member_ids, m.loser_team_member_ids,
+               m.winner_team_amount, m.loser_team_amount
         FROM meetings m
         LEFT JOIN scores s ON m.id = s.meeting_id
         GROUP BY m.id
@@ -53,7 +55,13 @@ data class MeetingWithStatsEntity(
     val memo: String,
     val created_at: Long,
     val participant_count: Int,
-    val game_count: Int
+    val game_count: Int,
+    // 팀전 관련 필드
+    val is_team_match: Boolean,
+    val winner_team_member_ids: String,
+    val loser_team_member_ids: String,
+    val winner_team_amount: Int,
+    val loser_team_amount: Int
 )
 
 @Dao
@@ -178,10 +186,12 @@ interface ScoreDao {
     /**
      * 특정 모임의 회원별 점수 합계와 기본 에버리지 조회
      * 벌금 계산용: 3게임 합계가 기본에버리지×3 미만인 경우 벌금 부과
+     * 게임 수 계산: 0점은 게임을 치지 않은 것으로 처리 (score > 0인 경우만 카운트)
      */
     @Query("""
         SELECT s.member_id, m.name, COALESCE(m.initial_average, 0) as initial_average,
-               SUM(s.score) as total_score, COUNT(s.id) as game_count
+               SUM(CASE WHEN s.score > 0 THEN s.score ELSE 0 END) as total_score,
+               SUM(CASE WHEN s.score > 0 THEN 1 ELSE 0 END) as game_count
         FROM scores s
         INNER JOIN members m ON s.member_id = m.id
         WHERE s.meeting_id = :meetingId

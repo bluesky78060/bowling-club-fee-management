@@ -21,6 +21,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import android.content.Intent
+import android.widget.Toast
+import java.text.NumberFormat
+import java.util.Locale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -35,7 +38,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -80,6 +82,9 @@ import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
 import com.bowlingclub.fee.ui.theme.PrimaryLight
+import com.bowlingclub.fee.ui.theme.Success
+import androidx.compose.material3.Switch
+import androidx.compose.foundation.verticalScroll
 import java.time.format.DateTimeFormatter
 
 data class ScoreEntry(
@@ -108,6 +113,14 @@ fun ScoreInputScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     val selectedMembers = remember { mutableStateMapOf<Long, Boolean>() }
     var isInitialized by remember { mutableStateOf(false) }
+
+    // 팀전 상태 (모임에서 불러오기)
+    var isTeamMatch by remember { mutableStateOf(meeting.isTeamMatch) }
+    var winnerTeamMemberIds by remember { mutableStateOf(meeting.winnerTeamMemberIds) }
+    var loserTeamMemberIds by remember { mutableStateOf(meeting.loserTeamMemberIds) }
+    var winnerTeamAmount by remember { mutableStateOf(meeting.winnerTeamAmount.toString().takeIf { it != "0" } ?: "") }
+    var loserTeamAmount by remember { mutableStateOf(meeting.loserTeamAmount.toString().takeIf { it != "0" } ?: "") }
+    var showTeamMatchSection by remember { mutableStateOf(false) }
 
     // 점수 공유 메시지 생성 함수
     fun generateScoreShareMessage(): String {
@@ -239,6 +252,36 @@ fun ScoreInputScreen(
                     IconButton(onClick = { showMemberDialog = true }) {
                         Icon(Icons.Default.PersonAdd, contentDescription = "회원 추가", tint = Primary)
                     }
+                    // 저장 버튼
+                    IconButton(
+                        onClick = {
+                            val scoresToSave = scoreEntries.flatMap { entry ->
+                                entry.scores.mapIndexedNotNull { index, score ->
+                                    if (score != null && score > 0) {
+                                        Score(
+                                            memberId = entry.memberId,
+                                            meetingId = meeting.id,
+                                            gameNumber = index + 1,
+                                            score = score
+                                        )
+                                    } else null
+                                }
+                            }
+                            viewModel.addScores(scoresToSave, meeting.id)
+                            // 팀전 정보도 저장
+                            viewModel.updateMeetingTeamMatch(
+                                meeting = meeting,
+                                isTeamMatch = isTeamMatch,
+                                winnerTeamMemberIds = winnerTeamMemberIds,
+                                loserTeamMemberIds = loserTeamMemberIds,
+                                winnerTeamAmount = winnerTeamAmount.toIntOrNull() ?: 0,
+                                loserTeamAmount = loserTeamAmount.toIntOrNull() ?: 0
+                            )
+                            onSave()
+                        }
+                    ) {
+                        Icon(Icons.Default.Save, contentDescription = "저장", tint = Primary)
+                    }
                     if (onDelete != null) {
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(Icons.Default.Delete, contentDescription = "모임 삭제", tint = Danger)
@@ -250,38 +293,13 @@ fun ScoreInputScreen(
                 )
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    // Convert entries to Score objects and save
-                    val scoresToSave = scoreEntries.flatMap { entry ->
-                        entry.scores.mapIndexedNotNull { index, score ->
-                            if (score != null && score > 0) {
-                                Score(
-                                    memberId = entry.memberId,
-                                    meetingId = meeting.id,
-                                    gameNumber = index + 1,
-                                    score = score
-                                )
-                            } else null
-                        }
-                    }
-                    // 기존 점수 삭제 후 새 점수 저장 (중복 방지)
-                    viewModel.addScores(scoresToSave, meeting.id)
-                    onSave()
-                },
-                containerColor = Primary,
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Default.Save, contentDescription = "저장")
-            }
-        },
         containerColor = BackgroundSecondary
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
         ) {
             // Game Count Controls
             Row(
@@ -347,7 +365,7 @@ fun ScoreInputScreen(
                 // Empty state
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .weight(1f)
                         .padding(32.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -428,11 +446,8 @@ fun ScoreInputScreen(
                         HorizontalDivider(color = Gray200)
 
                         // Score Rows
-                        LazyColumn {
-                            itemsIndexed(
-                                scoreEntries,
-                                key = { _, entry -> entry.memberId }
-                            ) { index, entry ->
+                        Column {
+                            scoreEntries.forEachIndexed { index, entry ->
                                 ScoreRow(
                                     entry = entry,
                                     gameCount = gameCount,
@@ -443,6 +458,277 @@ fun ScoreInputScreen(
                                 if (index < scoreEntries.lastIndex) {
                                     HorizontalDivider(color = Gray200)
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // 팀전 섹션 (참석자가 2명 이상일 때만 표시)
+                if (scoreEntries.size >= 2) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 팀전 설정 헤더
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.White)
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "🏆 팀전 설정",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Switch(
+                            checked = isTeamMatch,
+                            onCheckedChange = { isTeamMatch = it }
+                        )
+                    }
+
+                    // 팀전 활성화 시 상세 설정
+                    if (isTeamMatch) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White)
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            // 이긴팀 선택
+                            Text(
+                                text = "🏆 이긴팀 (${winnerTeamMemberIds.size}명)",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = Success
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                scoreEntries.forEach { entry ->
+                                    val isWinner = winnerTeamMemberIds.contains(entry.memberId)
+                                    val isLoser = loserTeamMemberIds.contains(entry.memberId)
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(20.dp))
+                                            .background(
+                                                when {
+                                                    isWinner -> Success.copy(alpha = 0.2f)
+                                                    isLoser -> Gray200.copy(alpha = 0.5f)
+                                                    else -> Color.White
+                                                }
+                                            )
+                                            .border(
+                                                width = 1.dp,
+                                                color = when {
+                                                    isWinner -> Success
+                                                    isLoser -> Gray400
+                                                    else -> Gray200
+                                                },
+                                                shape = RoundedCornerShape(20.dp)
+                                            )
+                                            .then(
+                                                if (!isLoser) {
+                                                    Modifier.clickable {
+                                                        winnerTeamMemberIds = if (isWinner) {
+                                                            winnerTeamMemberIds - entry.memberId
+                                                        } else {
+                                                            winnerTeamMemberIds + entry.memberId
+                                                        }
+                                                    }
+                                                } else {
+                                                    Modifier
+                                                }
+                                            )
+                                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(
+                                            text = if (isLoser) "${entry.memberName} (진팀)" else entry.memberName,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = when {
+                                                isWinner -> Success
+                                                isLoser -> Gray400
+                                                else -> Gray500
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // 진팀 선택
+                            Text(
+                                text = "💔 진팀 (${loserTeamMemberIds.size}명)",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = Danger
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                scoreEntries.forEach { entry ->
+                                    val isWinner = winnerTeamMemberIds.contains(entry.memberId)
+                                    val isLoser = loserTeamMemberIds.contains(entry.memberId)
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(20.dp))
+                                            .background(
+                                                when {
+                                                    isLoser -> Danger.copy(alpha = 0.2f)
+                                                    isWinner -> Gray200.copy(alpha = 0.5f)
+                                                    else -> Color.White
+                                                }
+                                            )
+                                            .border(
+                                                width = 1.dp,
+                                                color = when {
+                                                    isLoser -> Danger
+                                                    isWinner -> Gray400
+                                                    else -> Gray200
+                                                },
+                                                shape = RoundedCornerShape(20.dp)
+                                            )
+                                            .then(
+                                                if (!isWinner) {
+                                                    Modifier.clickable {
+                                                        loserTeamMemberIds = if (isLoser) {
+                                                            loserTeamMemberIds - entry.memberId
+                                                        } else {
+                                                            loserTeamMemberIds + entry.memberId
+                                                        }
+                                                    }
+                                                } else {
+                                                    Modifier
+                                                }
+                                            )
+                                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(
+                                            text = if (isWinner) "${entry.memberName} (이긴팀)" else entry.memberName,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = when {
+                                                isLoser -> Danger
+                                                isWinner -> Gray400
+                                                else -> Gray500
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // 천단위 콤마 포맷터
+                            val numberFormat = remember { NumberFormat.getNumberInstance(Locale.KOREA) }
+                            fun formatWithComma(value: String): String {
+                                val number = value.filter { it.isDigit() }.toLongOrNull() ?: return ""
+                                return numberFormat.format(number)
+                            }
+                            fun parseFromComma(value: String): String {
+                                return value.filter { it.isDigit() }
+                            }
+
+                            // 금액 입력
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "이긴팀 금액",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Success
+                                    )
+                                    OutlinedTextField(
+                                        value = if (winnerTeamAmount.isNotEmpty()) formatWithComma(winnerTeamAmount) else "",
+                                        onValueChange = {
+                                            val digits = parseFromComma(it)
+                                            if (digits.length <= 10) winnerTeamAmount = digits
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        placeholder = { Text("예: 5,000") },
+                                        suffix = { Text("원") },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = Success,
+                                            unfocusedBorderColor = Gray200
+                                        )
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "진팀 금액",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Danger
+                                    )
+                                    OutlinedTextField(
+                                        value = if (loserTeamAmount.isNotEmpty()) formatWithComma(loserTeamAmount) else "",
+                                        onValueChange = {
+                                            val digits = parseFromComma(it)
+                                            if (digits.length <= 10) loserTeamAmount = digits
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        placeholder = { Text("예: 10,000") },
+                                        suffix = { Text("원") },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = Danger,
+                                            unfocusedBorderColor = Gray200
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "💡 이긴팀: 5,000원 / 진팀: 10,000원 처럼 각 팀이 낼 금액을 입력하세요.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Gray500
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // 팀전 저장 버튼 (중복 클릭 방지)
+                            var isTeamMatchSaving by remember { mutableStateOf(false) }
+                            Button(
+                                onClick = {
+                                    if (!isTeamMatchSaving) {
+                                        isTeamMatchSaving = true
+                                        viewModel.updateMeetingTeamMatch(
+                                            meeting = meeting,
+                                            isTeamMatch = isTeamMatch,
+                                            winnerTeamMemberIds = winnerTeamMemberIds,
+                                            loserTeamMemberIds = loserTeamMemberIds,
+                                            winnerTeamAmount = winnerTeamAmount.toIntOrNull() ?: 0,
+                                            loserTeamAmount = loserTeamAmount.toIntOrNull() ?: 0
+                                        )
+                                        Toast.makeText(context, "팀전 설정이 저장되었습니다", Toast.LENGTH_SHORT).show()
+                                        isTeamMatchSaving = false
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !isTeamMatchSaving,
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.Save, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("팀전 저장")
                             }
                         }
                     }

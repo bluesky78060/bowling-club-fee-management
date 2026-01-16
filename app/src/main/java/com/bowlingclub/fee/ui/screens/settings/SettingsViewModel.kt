@@ -113,6 +113,19 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateGameFeePerGame(fee: Int) {
+        if (fee < 0) {
+            _uiState.update { it.copy(errorMessage = "게임비는 0원 이상이어야 합니다") }
+            return
+        }
+        viewModelScope.launch {
+            val result = settingsRepository.updateGameFeePerGame(fee)
+            if (result.isError) {
+                _uiState.update { it.copy(errorMessage = "1게임당 게임비 변경에 실패했습니다") }
+            }
+        }
+    }
+
     fun showResetDialog() {
         _uiState.update { it.copy(showResetDialog = true) }
     }
@@ -141,6 +154,7 @@ class SettingsViewModel @Inject constructor(
             put("averageGameCount", settings.averageGameCount)
             put("handicapUpperLimit", settings.handicapUpperLimit)
             put("enableAutoBackup", settings.enableAutoBackup)
+            put("gameFeePerGame", settings.gameFeePerGame)
         }.toString(2)
     }
 
@@ -159,7 +173,8 @@ class SettingsViewModel @Inject constructor(
                     defaultFeeAmount = json.optInt("defaultFeeAmount", 10000),
                     averageGameCount = json.optInt("averageGameCount", 12),
                     handicapUpperLimit = json.optInt("handicapUpperLimit", 50),
-                    enableAutoBackup = json.optBoolean("enableAutoBackup", false)
+                    enableAutoBackup = json.optBoolean("enableAutoBackup", false),
+                    gameFeePerGame = json.optInt("gameFeePerGame", 3000)
                 )
 
                 val result = settingsRepository.updateSettings(settings)

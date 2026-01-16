@@ -1,5 +1,7 @@
 package com.bowlingclub.fee.domain.model
 
+import android.util.Log
+
 /**
  * A generic class that holds a value or an exception
  */
@@ -11,6 +13,17 @@ sealed class Result<out T> {
     val isSuccess: Boolean get() = this is Success
     val isError: Boolean get() = this is Error
     val isLoading: Boolean get() = this is Loading
+
+    /**
+     * Error 인 경우 로그를 출력하고 true 반환
+     */
+    fun logErrorIfFailed(tag: String, operation: String): Boolean {
+        if (this is Error) {
+            Log.e(tag, "$operation failed: ${this.message}", this.exception)
+            return true
+        }
+        return false
+    }
 
     fun getOrNull(): T? = when (this) {
         is Success -> data

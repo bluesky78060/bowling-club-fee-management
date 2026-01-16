@@ -126,6 +126,9 @@ data class SettlementMemberEntity(
     @ColumnInfo(name = "exclude_food", defaultValue = "0")
     val excludeFood: Boolean = false,
 
+    @ColumnInfo(name = "exclude_game", defaultValue = "0")
+    val excludeGame: Boolean = false,
+
     @ColumnInfo(name = "has_penalty", defaultValue = "0")
     val hasPenalty: Boolean = false,
 
@@ -144,6 +147,7 @@ data class SettlementMemberEntity(
         memberId = memberId,
         amount = amount,
         excludeFood = excludeFood,
+        excludeGame = excludeGame,
         hasPenalty = hasPenalty,
         isDiscounted = isDiscounted,
         isPaid = isPaid,
@@ -162,6 +166,7 @@ data class SettlementMemberEntity(
             memberId = sm.memberId,
             amount = sm.amount,
             excludeFood = sm.excludeFood,
+            excludeGame = sm.excludeGame,
             hasPenalty = sm.hasPenalty,
             isDiscounted = sm.isDiscounted,
             isPaid = sm.isPaid,

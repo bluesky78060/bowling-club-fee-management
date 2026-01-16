@@ -8,6 +8,12 @@ data class Meeting(
     val date: LocalDate,
     val location: String = "",
     val memo: String = "",
+    // 팀전 관련 필드
+    val isTeamMatch: Boolean = false,
+    val winnerTeamMemberIds: Set<Long> = emptySet(),
+    val loserTeamMemberIds: Set<Long> = emptySet(),
+    val winnerTeamAmount: Int = 0,
+    val loserTeamAmount: Int = 0,
     val createdAt: LocalDateTime = LocalDateTime.now()
 )
 

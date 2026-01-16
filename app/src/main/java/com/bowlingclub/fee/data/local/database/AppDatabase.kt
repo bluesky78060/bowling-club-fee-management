@@ -40,7 +40,7 @@ import com.bowlingclub.fee.data.local.database.entity.TeamMemberEntity
         TeamMatchEntity::class,
         TeamMatchScoreEntity::class
     ],
-    version = 7,
+    version = 9,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -178,6 +178,24 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE `members` ADD COLUMN `is_discounted` INTEGER NOT NULL DEFAULT 0")
                 // Add is_discounted column to settlement_members table
                 db.execSQL("ALTER TABLE `settlement_members` ADD COLUMN `is_discounted` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add team match columns to meetings table
+                db.execSQL("ALTER TABLE `meetings` ADD COLUMN `is_team_match` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `meetings` ADD COLUMN `winner_team_member_ids` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `meetings` ADD COLUMN `loser_team_member_ids` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `meetings` ADD COLUMN `winner_team_amount` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `meetings` ADD COLUMN `loser_team_amount` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add exclude_game column to settlement_members table (게임비 제외 - 식사만 하는 사람)
+                db.execSQL("ALTER TABLE `settlement_members` ADD COLUMN `exclude_game` INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

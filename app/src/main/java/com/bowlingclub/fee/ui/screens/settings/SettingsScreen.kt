@@ -258,6 +258,16 @@ fun SettingsScreen(
                     )
                 }
 
+                // 게임비 설정
+                SettingsSection(title = "게임비 설정") {
+                    SettingsNumberField(
+                        label = "1게임당 게임비",
+                        value = uiState.settings.gameFeePerGame,
+                        suffix = "원",
+                        onValueChange = { viewModel.updateGameFeePerGame(it) }
+                    )
+                }
+
                 // 점수 설정
                 SettingsSection(title = "점수 설정") {
                     SettingsNumberField(

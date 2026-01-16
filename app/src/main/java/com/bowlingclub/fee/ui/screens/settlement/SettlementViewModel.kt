@@ -9,6 +9,7 @@ import com.bowlingclub.fee.data.repository.AccountRepository
 import com.bowlingclub.fee.data.repository.MeetingWithStats
 import com.bowlingclub.fee.data.repository.MemberRepository
 import com.bowlingclub.fee.data.repository.ScoreRepository
+import com.bowlingclub.fee.data.repository.SettingsRepository
 import com.bowlingclub.fee.data.repository.SettlementRepository
 import com.bowlingclub.fee.domain.model.Account
 import com.bowlingclub.fee.domain.model.AccountType
@@ -41,6 +42,9 @@ data class SettlementMemberData(
 ) {
     /** 식비 제외 여부 편의 프로퍼티 */
     val isExcludeFood: Boolean get() = settlementMember?.excludeFood == true
+
+    /** 게임비 제외 여부 편의 프로퍼티 */
+    val isExcludeGame: Boolean get() = settlementMember?.excludeGame == true
 
     /** 개인 납부 금액 편의 프로퍼티 */
     val amount: Int get() = settlementMember?.amount ?: 0
@@ -81,12 +85,23 @@ data class SettlementUiState(
     val formOtherFee: String = "",
     val formMemo: String = "",
     val formSelectedMemberIds: Set<Long> = emptySet(),
-    val formExcludeFoodMemberIds: Set<Long> = emptySet(),
+    val formExcludeFoodMemberIds: Set<Long> = emptySet(),  // 식비 제외 (게임만 치는 사람)
+    val formExcludeGameMemberIds: Set<Long> = emptySet(),  // 게임비 제외 (식사만 하는 사람)
     // 벌금 관련 상태
     val formPenaltyMembers: List<MemberMeetingScoreSummary> = emptyList(),
     val formPenaltyMemberIds: Set<Long> = emptySet(),  // 벌금 대상 회원 ID (체크박스로 수정 가능)
+    // 모든 참석자의 점수 요약 (게임 수 포함)
+    val formAllMemberSummaries: List<MemberMeetingScoreSummary> = emptyList(),
     // 감면 대상자 관련 상태
-    val formDiscountedMemberIds: Set<Long> = emptySet()  // 감면 대상 회원 ID
+    val formDiscountedMemberIds: Set<Long> = emptySet(),  // 감면 대상 회원 ID
+    // 팀전 관련 상태
+    val formIsTeamMatch: Boolean = false,  // 팀전 여부
+    val formWinnerTeamMemberIds: Set<Long> = emptySet(),  // 이긴팀 회원 ID
+    val formLoserTeamMemberIds: Set<Long> = emptySet(),  // 진팀 회원 ID
+    val formWinnerTeamAmount: String = "",  // 이긴팀 추가 금액 (보통 음수 또는 0)
+    val formLoserTeamAmount: String = "",  // 진팀 추가 금액 (보통 양수)
+    // 게임비 설정
+    val gameFeePerGame: Int = 3000  // 1게임당 게임비 (설정에서 가져옴)
 )
 
 @HiltViewModel
@@ -95,7 +110,8 @@ class SettlementViewModel @Inject constructor(
     private val scoreRepository: ScoreRepository,
     private val memberRepository: MemberRepository,
     private val hybridOcrRepository: HybridOcrRepository,
-    private val accountRepository: AccountRepository
+    private val accountRepository: AccountRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettlementUiState())
@@ -106,6 +122,15 @@ class SettlementViewModel @Inject constructor(
 
     init {
         loadData()
+        loadSettings()
+    }
+
+    private fun loadSettings() {
+        viewModelScope.launch {
+            settingsRepository.settings.collect { settings ->
+                _uiState.update { it.copy(gameFeePerGame = settings.gameFeePerGame) }
+            }
+        }
     }
 
     private fun loadData() {
@@ -154,15 +179,28 @@ class SettlementViewModel @Inject constructor(
 
     fun createSettlement(
         meetingId: Long,
-        gameFee: Int,
+        gameFee: Int,  // 총 게임비 (표시용)
         foodFee: Int,
         otherFee: Int,
         memo: String,
         memberIds: List<Long>,
         excludeFoodMemberIds: List<Long> = emptyList(),
+        excludeGameMemberIds: List<Long> = emptyList(),  // 게임비 제외 (식사만 하는 사람)
         penaltyMemberIds: List<Long> = emptyList(),
-        discountedMemberIds: List<Long> = emptyList()
+        discountedMemberIds: List<Long> = emptyList(),
+        // 팀전 관련 파라미터
+        isTeamMatch: Boolean = false,
+        winnerTeamMemberIds: List<Long> = emptyList(),
+        loserTeamMemberIds: List<Long> = emptyList(),
+        winnerTeamAmount: Int = 0,  // 이긴팀 추가 금액 (예: 5000원)
+        loserTeamAmount: Int = 0    // 진팀 추가 금액 (예: 10000원)
     ) {
+        // 회원별 게임 수 맵 생성 (모든 참석자의 점수 요약에서 가져옴)
+        val memberGameCounts: Map<Long, Int> = _uiState.value.formAllMemberSummaries
+            .associate { it.member_id to it.game_count }
+
+        // 1게임당 게임비 (설정에서 가져옴)
+        val gameFeePerGame = _uiState.value.gameFeePerGame
         // Input validation
         if (memberIds.isEmpty()) {
             _uiState.update { it.copy(errorMessage = "참석자를 선택해주세요") }
@@ -188,31 +226,29 @@ class SettlementViewModel @Inject constructor(
         viewModelScope.launch {
             // 벌금 금액 계산
             val penaltyFee = penaltyMemberIds.size * SettlementConfig.PENALTY_AMOUNT
-            val totalAmount = gameFee + foodFee + otherFee + penaltyFee
 
-            // 식비 참여자 수 계산
+            // gameFee는 총 게임비 (자동 계산된 값 또는 수동 입력)
+            val gameFeeTotal = gameFee
+            val totalAmount = gameFeeTotal + foodFee + otherFee + penaltyFee
+
+            // 식비 참여자 수 계산 (전체 - 식비 제외자)
             val foodParticipantCount = memberIds.size - excludeFoodMemberIds.size
 
-            // 게임비+기타비용은 전체 인원으로 나눔, 식비는 식비 참여자만으로 나눔
-            // 방어적 프로그래밍: 0으로 나누기 방지
-            // 1000원 단위 올림 적용 (예: 32,100원 → 33,000원)
-            val basePerPersonRaw = if (memberIds.isNotEmpty()) (gameFee + otherFee) / memberIds.size else 0
+            // 기타비용은 전체 인원수로 나눔, 식비는 식비 참여자만으로 나눔
+            val otherPerPersonRaw = if (memberIds.isNotEmpty()) otherFee / memberIds.size else 0
             val foodPerPersonRaw = if (foodParticipantCount > 0) foodFee / foodParticipantCount else 0
 
             // 1000원 단위 올림
-            val basePerPerson = roundUpTo1000(basePerPersonRaw)
+            val otherPerPerson = roundUpTo1000(otherPerPersonRaw)
             val foodPerPerson = roundUpTo1000(foodPerPersonRaw)
 
-            // 1000원 단위 올림을 적용하므로 나머지 금액 배분 불필요
-            val baseRemainder = 0
-            val foodRemainder = 0
-
-            // 정산 기본 정보의 perPerson은 식비 포함 금액으로 저장 (올림 적용)
-            val perPerson = basePerPerson + foodPerPerson
+            // 정산 기본 정보의 perPerson (대표 금액, 3게임 기준)
+            val representativeGameFee = 3 * gameFeePerGame  // 3게임 기준 게임비
+            val perPerson = representativeGameFee + otherPerPerson + foodPerPerson
 
             val settlement = Settlement(
                 meetingId = meetingId,
-                gameFee = gameFee,
+                gameFee = gameFeeTotal,  // 총 게임비 저장
                 foodFee = foodFee,
                 otherFee = otherFee,
                 penaltyFee = penaltyFee,
@@ -221,21 +257,24 @@ class SettlementViewModel @Inject constructor(
                 memo = memo
             )
 
-            // 감면 대상자 게임비 (50%)
-            val discountedBasePerPerson = basePerPerson / 2
-
             val result = settlementRepository.createSettlementWithMembers(
                 settlement = settlement,
                 memberIds = memberIds,
                 excludeFoodMemberIds = excludeFoodMemberIds,
+                excludeGameMemberIds = excludeGameMemberIds,
                 penaltyMemberIds = penaltyMemberIds,
                 discountedMemberIds = discountedMemberIds,
                 penaltyAmount = SettlementConfig.PENALTY_AMOUNT,
-                basePerPerson = basePerPerson,
-                discountedBasePerPerson = discountedBasePerPerson,
+                gameFeePerGame = gameFeePerGame,  // 1게임당 게임비
+                memberGameCounts = memberGameCounts,  // 회원별 게임 수
+                otherPerPerson = otherPerPerson,
                 foodPerPerson = foodPerPerson,
-                baseRemainder = baseRemainder,
-                foodRemainder = foodRemainder
+                // 팀전 관련 파라미터
+                isTeamMatch = isTeamMatch,
+                winnerTeamMemberIds = winnerTeamMemberIds,
+                loserTeamMemberIds = loserTeamMemberIds,
+                winnerTeamAmount = winnerTeamAmount,
+                loserTeamAmount = loserTeamAmount
             )
             if (result.isError) {
                 _uiState.update { it.copy(errorMessage = "정산 생성에 실패했습니다") }
@@ -376,20 +415,26 @@ class SettlementViewModel @Inject constructor(
             val excludeFoodCount = selectedSettlement.members.count { it.isExcludeFood }
             val foodParticipantCount = memberCount - excludeFoodCount
 
+            // gameFee는 1인당 게임비로 입력받음
+            // 총 게임비 = 1인당 게임비 × 인원수
+            val gameFeeTotal = gameFee * memberCount
+
             // 1000원 단위 올림 적용
-            val basePerPersonRaw = (gameFee + otherFee) / memberCount
+            val gameFeePerPerson = roundUpTo1000(gameFee)
+            val otherPerPersonRaw = otherFee / memberCount
             val foodPerPersonRaw = if (foodParticipantCount > 0) foodFee / foodParticipantCount else 0
 
-            val basePerPerson = roundUpTo1000(basePerPersonRaw)
+            val otherPerPerson = roundUpTo1000(otherPerPersonRaw)
             val foodPerPerson = roundUpTo1000(foodPerPersonRaw)
+            val basePerPerson = gameFeePerPerson + otherPerPerson
             val perPerson = basePerPerson + foodPerPerson
 
             // 벌금 금액은 기존 것 유지
             val penaltyFee = selectedSettlement.settlement.penaltyFee
-            val totalAmount = gameFee + foodFee + otherFee + penaltyFee
+            val totalAmount = gameFeeTotal + foodFee + otherFee + penaltyFee
 
             val updatedSettlement = selectedSettlement.settlement.copy(
-                gameFee = gameFee,
+                gameFee = gameFeeTotal,  // 총 게임비 저장
                 foodFee = foodFee,
                 otherFee = otherFee,
                 totalAmount = totalAmount,
@@ -402,7 +447,8 @@ class SettlementViewModel @Inject constructor(
                 _uiState.update { it.copy(errorMessage = "정산 수정에 실패했습니다") }
             } else {
                 // 감면 대상자 게임비 (50%)
-                val discountedBasePerPerson = basePerPerson / 2
+                val discountedGameFeePerPerson = gameFeePerPerson / 2
+                val discountedBasePerPerson = discountedGameFeePerPerson + otherPerPerson
 
                 // 회원별 금액도 재계산하여 업데이트
                 selectedSettlement.members.forEach { memberData ->
@@ -556,7 +602,8 @@ class SettlementViewModel @Inject constructor(
                     formExcludeFoodMemberIds = emptySet(),
                     formDiscountedMemberIds = emptySet(),
                     formPenaltyMembers = emptyList(),
-                    formPenaltyMemberIds = emptySet()
+                    formPenaltyMemberIds = emptySet(),
+                    formAllMemberSummaries = emptyList()
                 )
             }
         }
@@ -565,19 +612,30 @@ class SettlementViewModel @Inject constructor(
     /**
      * 모임의 참석자 및 벌금 대상 회원을 조회
      * - 참석자: 해당 모임에 점수가 기록된 모든 회원
+     * - 점수가 없으면: 전체 활성 회원을 기본 선택
      * - 벌금 대상: 3게임 이상 치고, 합계가 기본에버리지×게임수 미만인 경우
+     * - 팀전: 모임에 저장된 팀전 정보를 불러옴
      */
     private fun loadMeetingParticipantsAndPenaltyMembers(meetingId: Long) {
         viewModelScope.launch {
             val result = scoreRepository.getMemberScoreSummaryByMeeting(meetingId)
+            val activeMembers = _uiState.value.activeMembers
+
+            // 모임 정보에서 팀전 데이터 가져오기
+            val meeting = _uiState.value.recentMeetings.find { it.meeting.id == meetingId }?.meeting
+
             if (result.isSuccess) {
                 val allSummaries = result.getOrNull() ?: emptyList()
 
                 // 모임 참석자 ID 목록 (점수가 기록된 모든 회원)
-                val participantMemberIds = allSummaries.map { it.member_id }.toSet()
+                // 점수가 없으면 전체 활성 회원을 기본 선택
+                val participantMemberIds = if (allSummaries.isNotEmpty()) {
+                    allSummaries.map { it.member_id }.toSet()
+                } else {
+                    activeMembers.map { it.id }.toSet()
+                }
 
                 // 참석자 중 감면 대상자 자동 선택
-                val activeMembers = _uiState.value.activeMembers
                 val discountedMemberIds = participantMemberIds.filter { memberId ->
                     activeMembers.find { it.id == memberId }?.isDiscounted == true
                 }.toSet()
@@ -591,11 +649,36 @@ class SettlementViewModel @Inject constructor(
                         formSelectedMemberIds = participantMemberIds,
                         formDiscountedMemberIds = discountedMemberIds,
                         formPenaltyMembers = penaltyMembers,
-                        formPenaltyMemberIds = penaltyMemberIds
+                        formPenaltyMemberIds = penaltyMemberIds,
+                        formAllMemberSummaries = allSummaries,  // 모든 참석자 점수 요약 저장
+                        // 모임에서 팀전 정보 불러오기
+                        formIsTeamMatch = meeting?.isTeamMatch ?: false,
+                        formWinnerTeamMemberIds = meeting?.winnerTeamMemberIds ?: emptySet(),
+                        formLoserTeamMemberIds = meeting?.loserTeamMemberIds ?: emptySet(),
+                        formWinnerTeamAmount = meeting?.winnerTeamAmount?.takeIf { it != 0 }?.toString() ?: "",
+                        formLoserTeamAmount = meeting?.loserTeamAmount?.takeIf { it != 0 }?.toString() ?: ""
                     )
                 }
             } else {
-                _uiState.update { it.copy(errorMessage = "참석자 조회에 실패했습니다") }
+                // 에러 시에도 전체 활성 회원을 기본 선택
+                val allMemberIds = activeMembers.map { it.id }.toSet()
+                val discountedMemberIds = activeMembers.filter { it.isDiscounted }.map { it.id }.toSet()
+
+                _uiState.update {
+                    it.copy(
+                        formSelectedMemberIds = allMemberIds,
+                        formDiscountedMemberIds = discountedMemberIds,
+                        formPenaltyMembers = emptyList(),
+                        formPenaltyMemberIds = emptySet(),
+                        formAllMemberSummaries = emptyList(),  // 에러 시 비움
+                        // 모임에서 팀전 정보 불러오기
+                        formIsTeamMatch = meeting?.isTeamMatch ?: false,
+                        formWinnerTeamMemberIds = meeting?.winnerTeamMemberIds ?: emptySet(),
+                        formLoserTeamMemberIds = meeting?.loserTeamMemberIds ?: emptySet(),
+                        formWinnerTeamAmount = meeting?.winnerTeamAmount?.takeIf { it != 0 }?.toString() ?: "",
+                        formLoserTeamAmount = meeting?.loserTeamAmount?.takeIf { it != 0 }?.toString() ?: ""
+                    )
+                }
             }
         }
     }
@@ -635,12 +718,64 @@ class SettlementViewModel @Inject constructor(
         _uiState.update { it.copy(formExcludeFoodMemberIds = memberIds) }
     }
 
+    fun updateFormExcludeGameMemberIds(memberIds: Set<Long>) {
+        _uiState.update { it.copy(formExcludeGameMemberIds = memberIds) }
+    }
+
     fun updateFormPenaltyMemberIds(memberIds: Set<Long>) {
         _uiState.update { it.copy(formPenaltyMemberIds = memberIds) }
     }
 
     fun updateFormDiscountedMemberIds(memberIds: Set<Long>) {
         _uiState.update { it.copy(formDiscountedMemberIds = memberIds) }
+    }
+
+    // 팀전 관련 함수들
+    fun updateFormIsTeamMatch(isTeamMatch: Boolean) {
+        _uiState.update {
+            if (isTeamMatch) {
+                it.copy(formIsTeamMatch = true)
+            } else {
+                // 팀전 해제 시 팀 관련 데이터 초기화
+                it.copy(
+                    formIsTeamMatch = false,
+                    formWinnerTeamMemberIds = emptySet(),
+                    formLoserTeamMemberIds = emptySet(),
+                    formWinnerTeamAmount = "",
+                    formLoserTeamAmount = ""
+                )
+            }
+        }
+    }
+
+    fun updateFormWinnerTeamMemberIds(memberIds: Set<Long>) {
+        _uiState.update { state ->
+            // 이긴팀에 추가되는 회원은 진팀에서 제거
+            val newLoserTeamIds = state.formLoserTeamMemberIds - memberIds
+            state.copy(
+                formWinnerTeamMemberIds = memberIds,
+                formLoserTeamMemberIds = newLoserTeamIds
+            )
+        }
+    }
+
+    fun updateFormLoserTeamMemberIds(memberIds: Set<Long>) {
+        _uiState.update { state ->
+            // 진팀에 추가되는 회원은 이긴팀에서 제거
+            val newWinnerTeamIds = state.formWinnerTeamMemberIds - memberIds
+            state.copy(
+                formLoserTeamMemberIds = memberIds,
+                formWinnerTeamMemberIds = newWinnerTeamIds
+            )
+        }
+    }
+
+    fun updateFormWinnerTeamAmount(amount: String) {
+        _uiState.update { it.copy(formWinnerTeamAmount = amount) }
+    }
+
+    fun updateFormLoserTeamAmount(amount: String) {
+        _uiState.update { it.copy(formLoserTeamAmount = amount) }
     }
 
     fun clearFormState() {
@@ -653,9 +788,17 @@ class SettlementViewModel @Inject constructor(
                 formMemo = "",
                 formSelectedMemberIds = emptySet(),
                 formExcludeFoodMemberIds = emptySet(),
+                formExcludeGameMemberIds = emptySet(),
                 formPenaltyMembers = emptyList(),
                 formPenaltyMemberIds = emptySet(),
                 formDiscountedMemberIds = emptySet(),
+                formAllMemberSummaries = emptyList(),
+                // 팀전 관련 상태 초기화
+                formIsTeamMatch = false,
+                formWinnerTeamMemberIds = emptySet(),
+                formLoserTeamMemberIds = emptySet(),
+                formWinnerTeamAmount = "",
+                formLoserTeamAmount = "",
                 ocrResults = emptyList(),
                 pendingOcrResult = null
             )
@@ -665,18 +808,19 @@ class SettlementViewModel @Inject constructor(
     fun generateBillingMessage(details: SettlementWithDetails): String {
         val meeting = details.meetingInfo?.meeting
         val settlement = details.settlement
-        val unpaidMembers = details.members.filter { !it.isPaid }
 
-        // 식비 제외/포함 회원 분류 (편의 프로퍼티 사용)
-        val foodExcludedMembers = details.members.filter { it.isExcludeFood }
-        val foodIncludedMembers = details.members.filter { !it.isExcludeFood }
+        // 팀전 정보
+        val isTeamMatch = meeting?.isTeamMatch == true
+        val winnerTeamIds = meeting?.winnerTeamMemberIds ?: emptySet()
+        val loserTeamIds = meeting?.loserTeamMemberIds ?: emptySet()
+        val winnerTeamAmount = meeting?.winnerTeamAmount ?: 0
+        val loserTeamAmount = meeting?.loserTeamAmount ?: 0
 
         val sb = StringBuilder()
         sb.appendLine("📋 볼링 동호회 정산 안내")
         sb.appendLine()
         if (meeting != null) {
             sb.appendLine("📅 모임일: ${meeting.date}")
-            sb.appendLine("📍 장소: ${meeting.location}")
         }
         sb.appendLine()
         sb.appendLine("💰 비용 내역")
@@ -690,44 +834,81 @@ class SettlementViewModel @Inject constructor(
         if (settlement.penaltyFee > 0) {
             sb.appendLine("  - ⚠️ 벌금: ${formatAmount(settlement.penaltyFee)}")
         }
+        // 팀전 금액
+        if (isTeamMatch) {
+            if (winnerTeamAmount != 0) {
+                sb.appendLine("  - 🏆 이긴팀: ${formatAmount(winnerTeamAmount)}")
+            }
+            if (loserTeamAmount != 0) {
+                sb.appendLine("  - 💸 진팀: ${formatAmount(loserTeamAmount)}")
+            }
+        }
         sb.appendLine("  - 총액: ${formatAmount(settlement.totalAmount)}")
         sb.appendLine()
 
-        // 차등 금액이 있는 경우 (편의 프로퍼티 사용)
-        if (foodExcludedMembers.isNotEmpty() && settlement.foodFee > 0) {
-            val foodIncludedAmount = foodIncludedMembers.firstOrNull()?.let {
-                if (it.amount > 0) it.amount else settlement.perPerson
-            } ?: settlement.perPerson
-            val foodExcludedAmount = foodExcludedMembers.firstOrNull()?.let {
-                if (it.amount > 0) it.amount else settlement.perPerson
-            } ?: settlement.perPerson
-
-            sb.appendLine("👤 1인당 금액")
-            sb.appendLine("  - 🍽️ 식비 포함: ${formatAmount(foodIncludedAmount)}")
-            sb.appendLine("  - 🚫 식비 제외: ${formatAmount(foodExcludedAmount)}")
-            sb.appendLine()
-            sb.appendLine("🚫 식비 제외자: ${foodExcludedMembers.joinToString(", ") { it.member.name }}")
-        } else {
-            sb.appendLine("👤 1인당 금액: ${formatAmount(settlement.perPerson)}")
-        }
-        sb.appendLine()
-
-        // 감면 대상자 표시
-        val discountedMembers = details.members.filter { it.isDiscounted }
-        if (discountedMembers.isNotEmpty()) {
-            sb.appendLine("🎫 감면 대상: ${discountedMembers.joinToString(", ") { "${it.member.name} (50%)" }}")
-        }
-
-        // 벌금 대상자 표시
-        if (settlement.penaltyFee > 0) {
-            val penaltyMembers = details.members.filter { it.settlementMember?.hasPenalty == true }
-            if (penaltyMembers.isNotEmpty()) {
-                sb.appendLine("⚠️ 벌금 대상: ${penaltyMembers.joinToString(", ") { "${it.member.name} (+${formatAmount(SettlementConfig.PENALTY_AMOUNT)})" }}")
+        // 팀전 내역
+        if (isTeamMatch) {
+            sb.appendLine("🎯 팀전")
+            val winnerNames = details.members
+                .filter { it.member.id in winnerTeamIds }
+                .joinToString(", ") { it.member.name }
+            val loserNames = details.members
+                .filter { it.member.id in loserTeamIds }
+                .joinToString(", ") { it.member.name }
+            if (winnerNames.isNotEmpty()) {
+                val amountText = if (winnerTeamAmount != 0) " (${if (winnerTeamAmount > 0) "+" else ""}${formatAmount(winnerTeamAmount)})" else ""
+                sb.appendLine("  🏆 이긴팀: $winnerNames$amountText")
             }
+            if (loserNames.isNotEmpty()) {
+                val amountText = if (loserTeamAmount != 0) " (+${formatAmount(loserTeamAmount)})" else ""
+                sb.appendLine("  💸 진팀: $loserNames$amountText")
+            }
+            sb.appendLine()
         }
 
-        if (unpaidMembers.isNotEmpty()) {
-            sb.appendLine("⏳ 미납자: ${unpaidMembers.joinToString(", ") { it.member.name }}")
+        // 회원별 납부 금액 및 내역
+        sb.appendLine("👥 회원별 납부 금액")
+        details.members.forEach { memberData ->
+            val memberAmount = if (memberData.amount > 0) memberData.amount else settlement.perPerson
+
+            // 내역 생성
+            val breakdownParts = mutableListOf<String>()
+
+            // 게임비 (게임 제외가 아닌 경우에만)
+            if (!memberData.isExcludeGame && settlement.gameFee > 0) {
+                val gameLabel = if (memberData.isDiscounted) "게임비(50%)" else "게임비"
+                breakdownParts.add(gameLabel)
+            }
+
+            // 기타비용
+            if (settlement.otherFee > 0) {
+                breakdownParts.add("기타")
+            }
+
+            // 식비 (식비 제외가 아닌 경우에만)
+            if (!memberData.isExcludeFood && settlement.foodFee > 0) {
+                breakdownParts.add("식비")
+            }
+
+            // 벌금
+            if (memberData.hasPenalty) {
+                breakdownParts.add("벌금")
+            }
+
+            // 팀전 태그
+            val isWinnerTeam = isTeamMatch && memberData.member.id in winnerTeamIds
+            val isLoserTeam = isTeamMatch && memberData.member.id in loserTeamIds
+            val teamTag = when {
+                isWinnerTeam -> " 🏆"
+                isLoserTeam -> " 💸"
+                else -> ""
+            }
+
+            val breakdownText = if (breakdownParts.isNotEmpty()) {
+                " (${breakdownParts.joinToString("+")})"
+            } else ""
+
+            sb.appendLine("  ${memberData.member.name}$teamTag: ${formatAmount(memberAmount)}$breakdownText")
         }
 
         return sb.toString()

@@ -51,6 +51,19 @@ class ScoreRepository @Inject constructor(
                             date = LocalDate.ofEpochDay(entity.date),
                             location = entity.location,
                             memo = entity.memo,
+                            isTeamMatch = entity.is_team_match,
+                            winnerTeamMemberIds = entity.winner_team_member_ids
+                                .split(",")
+                                .filter { it.isNotBlank() }
+                                .mapNotNull { it.toLongOrNull() }
+                                .toSet(),
+                            loserTeamMemberIds = entity.loser_team_member_ids
+                                .split(",")
+                                .filter { it.isNotBlank() }
+                                .mapNotNull { it.toLongOrNull() }
+                                .toSet(),
+                            winnerTeamAmount = entity.winner_team_amount,
+                            loserTeamAmount = entity.loser_team_amount,
                             createdAt = LocalDateTime.ofInstant(
                                 Instant.ofEpochMilli(entity.created_at),
                                 ZoneId.systemDefault()

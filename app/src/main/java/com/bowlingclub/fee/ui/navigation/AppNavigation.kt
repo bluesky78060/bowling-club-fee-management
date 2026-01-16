@@ -502,8 +502,18 @@ fun AppNavigation() {
                         penaltyMembers = uiState.formPenaltyMembers,
                         penaltyMemberIds = uiState.formPenaltyMemberIds,
                         penaltyAmount = SettlementConfig.PENALTY_AMOUNT,
+                        // 모든 참석자의 게임 수 정보
+                        allMemberSummaries = uiState.formAllMemberSummaries,
+                        // 게임비 설정
+                        gameFeePerGame = uiState.gameFeePerGame,
                         // 감면 대상자 관련 상태
                         discountedMemberIds = uiState.formDiscountedMemberIds,
+                        // 팀전 관련 상태
+                        isTeamMatch = uiState.formIsTeamMatch,
+                        winnerTeamMemberIds = uiState.formWinnerTeamMemberIds,
+                        loserTeamMemberIds = uiState.formLoserTeamMemberIds,
+                        winnerTeamAmount = uiState.formWinnerTeamAmount,
+                        loserTeamAmount = uiState.formLoserTeamAmount,
                         // 콜백 함수들
                         onMeetingIdChange = { viewModel.updateFormMeetingId(it) },
                         onGameFeeChange = { viewModel.updateFormGameFee(it) },
@@ -512,10 +522,34 @@ fun AppNavigation() {
                         onMemoChange = { viewModel.updateFormMemo(it) },
                         onSelectedMemberIdsChange = { viewModel.updateFormSelectedMemberIds(it) },
                         onExcludeFoodMemberIdsChange = { viewModel.updateFormExcludeFoodMemberIds(it) },
+                        onExcludeGameMemberIdsChange = { viewModel.updateFormExcludeGameMemberIds(it) },
+                        excludeGameMemberIds = uiState.formExcludeGameMemberIds,
                         onPenaltyMemberIdsChange = { viewModel.updateFormPenaltyMemberIds(it) },
                         onDiscountedMemberIdsChange = { viewModel.updateFormDiscountedMemberIds(it) },
-                        onSave = { meetingId, gameFee, foodFee, otherFee, memo, memberIds, excludeFoodMemberIds, penaltyMemberIds, discountedMemberIds ->
-                            viewModel.createSettlement(meetingId, gameFee, foodFee, otherFee, memo, memberIds, excludeFoodMemberIds, penaltyMemberIds, discountedMemberIds)
+                        // 팀전 관련 콜백
+                        onIsTeamMatchChange = { viewModel.updateFormIsTeamMatch(it) },
+                        onWinnerTeamMemberIdsChange = { viewModel.updateFormWinnerTeamMemberIds(it) },
+                        onLoserTeamMemberIdsChange = { viewModel.updateFormLoserTeamMemberIds(it) },
+                        onWinnerTeamAmountChange = { viewModel.updateFormWinnerTeamAmount(it) },
+                        onLoserTeamAmountChange = { viewModel.updateFormLoserTeamAmount(it) },
+                        onSave = { meetingId, gameFee, foodFee, otherFee, memo, memberIds, excludeFoodMemberIds, excludeGameMemberIds, penaltyMemberIds, discountedMemberIds, isTeamMatch, winnerTeamMemberIds, loserTeamMemberIds, winnerTeamAmount, loserTeamAmount ->
+                            viewModel.createSettlement(
+                                meetingId = meetingId,
+                                gameFee = gameFee,
+                                foodFee = foodFee,
+                                otherFee = otherFee,
+                                memo = memo,
+                                memberIds = memberIds,
+                                excludeFoodMemberIds = excludeFoodMemberIds,
+                                excludeGameMemberIds = excludeGameMemberIds,
+                                penaltyMemberIds = penaltyMemberIds,
+                                discountedMemberIds = discountedMemberIds,
+                                isTeamMatch = isTeamMatch,
+                                winnerTeamMemberIds = winnerTeamMemberIds,
+                                loserTeamMemberIds = loserTeamMemberIds,
+                                winnerTeamAmount = winnerTeamAmount,
+                                loserTeamAmount = loserTeamAmount
+                            )
                             viewModel.clearFormState()
                             navController.popBackStack()
                         },

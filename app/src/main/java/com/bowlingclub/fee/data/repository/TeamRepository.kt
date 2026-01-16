@@ -17,6 +17,7 @@ import com.bowlingclub.fee.domain.model.TeamMemberScore
 import com.bowlingclub.fee.domain.model.TeamWithMembers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -183,13 +184,17 @@ class TeamRepository @Inject constructor(
     // Result calculations
     suspend fun getTeamMatchResults(matchId: Long): List<TeamMatchResult> {
         val match = teamDao.getTeamMatchById(matchId) ?: return emptyList()
-        val scores = teamDao.getTeamMatchScores(matchId).let { flow ->
-            var result: List<TeamMatchScoreEntity> = emptyList()
-            flow.collect { result = it; return@collect }
-            result
+        val scores = try {
+            teamDao.getTeamMatchScores(matchId).first()
+        } catch (e: Exception) {
+            emptyList()
         }
 
         if (scores.isEmpty()) return emptyList()
+
+        // Batch load all members to avoid N+1 query
+        val allMemberIds = scores.map { it.memberId }.distinct()
+        val membersMap = memberDao.getMembersByIds(allMemberIds).associateBy { it.id }
 
         val teamIds = scores.map { it.teamId }.distinct()
         return teamIds.mapNotNull { teamId ->
@@ -198,7 +203,7 @@ class TeamRepository @Inject constructor(
             val memberIds = teamScores.map { it.memberId }.distinct()
 
             val memberScores = memberIds.mapNotNull { memberId ->
-                val member = memberDao.getMemberById(memberId) ?: return@mapNotNull null
+                val member = membersMap[memberId] ?: return@mapNotNull null
                 val memberTeamScores = teamScores.filter { it.memberId == memberId }
                     .sortedBy { it.gameNumber }
                     .map { it.score }

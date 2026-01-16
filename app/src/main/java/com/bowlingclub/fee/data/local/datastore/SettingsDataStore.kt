@@ -26,6 +26,7 @@ class SettingsDataStore @Inject constructor(
         val AVERAGE_GAME_COUNT = intPreferencesKey("average_game_count")
         val HANDICAP_UPPER_LIMIT = intPreferencesKey("handicap_upper_limit")
         val ENABLE_AUTO_BACKUP = booleanPreferencesKey("enable_auto_backup")
+        val GAME_FEE_PER_GAME = intPreferencesKey("game_fee_per_game")
     }
 
     val settings: Flow<AppSettings> = dataStore.data.map { preferences ->
@@ -34,7 +35,8 @@ class SettingsDataStore @Inject constructor(
             defaultFeeAmount = preferences[Keys.DEFAULT_FEE_AMOUNT] ?: 10000,
             averageGameCount = preferences[Keys.AVERAGE_GAME_COUNT] ?: 12,
             handicapUpperLimit = preferences[Keys.HANDICAP_UPPER_LIMIT] ?: 50,
-            enableAutoBackup = preferences[Keys.ENABLE_AUTO_BACKUP] ?: false
+            enableAutoBackup = preferences[Keys.ENABLE_AUTO_BACKUP] ?: false,
+            gameFeePerGame = preferences[Keys.GAME_FEE_PER_GAME] ?: 3000
         )
     }
 
@@ -68,6 +70,12 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun updateGameFeePerGame(fee: Int) {
+        dataStore.edit { preferences ->
+            preferences[Keys.GAME_FEE_PER_GAME] = fee
+        }
+    }
+
     suspend fun updateSettings(settings: AppSettings) {
         dataStore.edit { preferences ->
             preferences[Keys.CLUB_NAME] = settings.clubName
@@ -75,6 +83,7 @@ class SettingsDataStore @Inject constructor(
             preferences[Keys.AVERAGE_GAME_COUNT] = settings.averageGameCount
             preferences[Keys.HANDICAP_UPPER_LIMIT] = settings.handicapUpperLimit
             preferences[Keys.ENABLE_AUTO_BACKUP] = settings.enableAutoBackup
+            preferences[Keys.GAME_FEE_PER_GAME] = settings.gameFeePerGame
         }
     }
 

@@ -37,7 +37,7 @@ app/src/main/java/com/bowlingclub/fee/
 │   └── DatabaseModule.kt  # Room DB, DAO 프로바이더
 ├── data/
 │   ├── local/database/
-│   │   ├── AppDatabase.kt         # Room Database (version 2)
+│   │   ├── AppDatabase.kt         # Room Database (version 9)
 │   │   ├── dao/                   # DAO 인터페이스
 │   │   └── entity/                # Room Entity 클래스
 │   └── repository/                # Repository 구현체
@@ -87,9 +87,9 @@ fun loadData() {
 
 ## Database
 
-- Room Database version: 2
-- 마이그레이션: `AppDatabase.MIGRATION_1_2`
-- 주요 테이블: members, payments, accounts, meetings, scores, settlements
+- Room Database version: 9
+- 마이그레이션: `AppDatabase.MIGRATION_1_2` ~ `MIGRATION_8_9`
+- 주요 테이블: members, payments, accounts, meetings, scores, settlements, donations, teams, team_members, team_matches, team_match_scores
 
 **Entity 변환 규칙**
 ```kotlin

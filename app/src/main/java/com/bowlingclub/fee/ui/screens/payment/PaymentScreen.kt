@@ -20,24 +20,33 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -63,8 +72,11 @@ import com.bowlingclub.fee.ui.theme.DangerLight
 import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
+import com.bowlingclub.fee.ui.theme.PrimaryLight
 import com.bowlingclub.fee.ui.theme.Success
 import com.bowlingclub.fee.ui.theme.SuccessLight
+import com.bowlingclub.fee.ui.theme.Warning
+import kotlinx.coroutines.launch
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
@@ -137,16 +149,45 @@ fun PaymentScreen(
     onAddPayment: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     // 천단위 콤마 포맷팅
     fun formatWithComma(num: Int): String = "%,d".format(num)
 
+    // 기본 금액 (UiState에서 가져옴)
+    val defaultAmount = uiState.defaultFeeAmount
+    val defaultAmountFormatted = formatWithComma(defaultAmount)
+
     // 다이얼로그 상태
     var showPaymentDialog by remember { mutableStateOf(false) }
     var selectedMemberPayment by remember { mutableStateOf<MemberPaymentData?>(null) }
-    var amountText by remember { mutableStateOf("10,000") }
+    var amountText by remember { mutableStateOf(defaultAmountFormatted) }
     var monthsText by remember { mutableStateOf("1") }
     var isMultiMonth by remember { mutableStateOf(false) }
+
+    // 빠른 납부 확인 다이얼로그 상태
+    var showQuickPaymentConfirmDialog by remember { mutableStateOf(false) }
+    var quickPaymentAmountText by remember { mutableStateOf(defaultAmountFormatted) }
+
+    // 성공/에러 메시지 처리
+    LaunchedEffect(uiState.successMessage) {
+        uiState.successMessage?.let { message ->
+            scope.launch {
+                snackbarHostState.showSnackbar(message)
+            }
+            viewModel.clearSuccessMessage()
+        }
+    }
+
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let { message ->
+            scope.launch {
+                snackbarHostState.showSnackbar(message)
+            }
+            viewModel.clearError()
+        }
+    }
 
     // 납부 다이얼로그 (납부/미납 모두 처리)
     if (showPaymentDialog && selectedMemberPayment != null) {
@@ -288,28 +329,163 @@ fun PaymentScreen(
         )
     }
 
+    // 빠른 납부 확인 다이얼로그
+    if (showQuickPaymentConfirmDialog) {
+        val selectedCount = uiState.selectedMemberIds.size
+        val paidMemberIds = remember(uiState.paidMembers) {
+            uiState.paidMembers.map { it.id }.toSet()
+        }
+        val unpaidSelectedCount = uiState.selectedMemberIds.count { id ->
+            id !in paidMemberIds
+        }
+
+        AlertDialog(
+            onDismissRequest = { showQuickPaymentConfirmDialog = false },
+            title = { Text("빠른 납부 확인") },
+            text = {
+                Column {
+                    Text(
+                        text = if (selectedCount != unpaidSelectedCount) {
+                            "선택된 ${selectedCount}명 중 미납 ${unpaidSelectedCount}명에게 납부 등록합니다."
+                        } else {
+                            "${selectedCount}명에게 납부 등록합니다."
+                        },
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    if (selectedCount != unpaidSelectedCount) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "* ${selectedCount - unpaidSelectedCount}명은 이미 납부 완료되어 제외됩니다.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Gray500
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = quickPaymentAmountText,
+                        onValueChange = { newValue ->
+                            val digitsOnly = newValue.filter { char -> char.isDigit() }
+                            val number = digitsOnly.toIntOrNull() ?: 0
+                            quickPaymentAmountText = if (digitsOnly.isEmpty()) "" else formatWithComma(number)
+                        },
+                        label = { Text("1인당 납부 금액") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        suffix = { Text("원") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (unpaidSelectedCount > 0) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        val totalAmount = (quickPaymentAmountText.filter { it.isDigit() }.toIntOrNull() ?: 0) * unpaidSelectedCount
+                        Text(
+                            text = "총 납부액: ${formatAmount(totalAmount)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Primary
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val amount = quickPaymentAmountText.filter { it.isDigit() }.toIntOrNull() ?: 0
+                        viewModel.processQuickPayment(amount)
+                        showQuickPaymentConfirmDialog = false
+                    }
+                ) {
+                    Text("납부 등록")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showQuickPaymentConfirmDialog = false }) {
+                    Text("취소")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "회비 관리",
+                        text = if (uiState.isQuickPaymentMode) {
+                            "빠른 납부 (${uiState.selectedMemberIds.size}명 선택)"
+                        } else {
+                            "회비 관리"
+                        },
                         fontWeight = FontWeight.Bold
                     )
                 },
+                navigationIcon = {
+                    if (uiState.isQuickPaymentMode) {
+                        IconButton(onClick = { viewModel.exitQuickPaymentMode() }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "빠른 납부 취소",
+                                tint = Gray500
+                            )
+                        }
+                    }
+                },
                 actions = {
-                    IconButton(onClick = onAddPayment) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = "납부 등록",
-                            tint = Primary
-                        )
+                    if (uiState.isQuickPaymentMode) {
+                        // 빠른 납부 모드: 전체 선택 / 선택 해제
+                        IconButton(
+                            onClick = {
+                                if (uiState.selectedMemberIds.isNotEmpty()) {
+                                    viewModel.clearAllSelections()
+                                } else {
+                                    viewModel.selectAllUnpaidMembers()
+                                }
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.SelectAll,
+                                contentDescription = if (uiState.selectedMemberIds.isNotEmpty()) "선택 해제" else "미납 전체 선택",
+                                tint = Primary
+                            )
+                        }
+                    } else {
+                        // 일반 모드: 빠른 납부 버튼
+                        IconButton(onClick = { viewModel.toggleQuickPaymentMode() }) {
+                            Icon(
+                                Icons.Default.FlashOn,
+                                contentDescription = "빠른 납부",
+                                tint = Warning
+                            )
+                        }
+                        IconButton(onClick = onAddPayment) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "납부 등록",
+                                tint = Primary
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = BackgroundSecondary
+                    containerColor = if (uiState.isQuickPaymentMode) PrimaryLight else BackgroundSecondary
                 )
             )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            if (uiState.isQuickPaymentMode && uiState.selectedMemberIds.isNotEmpty()) {
+                FloatingActionButton(
+                    onClick = {
+                        quickPaymentAmountText = defaultAmountFormatted
+                        showQuickPaymentConfirmDialog = true
+                    },
+                    containerColor = Primary
+                ) {
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = "선택 완료",
+                        tint = Color.White
+                    )
+                }
+            }
         },
         containerColor = BackgroundSecondary
     ) { paddingValues ->
@@ -379,12 +555,18 @@ fun PaymentScreen(
                     items(uiState.memberPayments, key = { it.member.id }) { memberPayment ->
                         PaymentStatusItem(
                             memberPayment = memberPayment,
+                            isQuickPaymentMode = uiState.isQuickPaymentMode,
+                            isSelected = memberPayment.member.id in uiState.selectedMemberIds,
                             onClick = {
-                                selectedMemberPayment = memberPayment
-                                amountText = formatWithComma(if (memberPayment.isPaid) memberPayment.amount else 10000)
-                                monthsText = "1"
-                                isMultiMonth = false
-                                showPaymentDialog = true
+                                if (uiState.isQuickPaymentMode) {
+                                    viewModel.toggleMemberSelection(memberPayment.member.id)
+                                } else {
+                                    selectedMemberPayment = memberPayment
+                                    amountText = formatWithComma(if (memberPayment.isPaid) memberPayment.amount else defaultAmount)
+                                    monthsText = "1"
+                                    isMultiMonth = false
+                                    showPaymentDialog = true
+                                }
                             }
                         )
                     }
@@ -496,6 +678,8 @@ private fun PaymentSummaryCard(
 @Composable
 private fun PaymentStatusItem(
     memberPayment: MemberPaymentData,
+    isQuickPaymentMode: Boolean = false,
+    isSelected: Boolean = false,
     onClick: () -> Unit = {}
 ) {
     val member = memberPayment.member
@@ -503,47 +687,78 @@ private fun PaymentStatusItem(
     val avatarBackground = if (member.gender == Gender.MALE) AvatarMaleBackground else AvatarFemaleBackground
     val avatarColor = if (member.gender == Gender.MALE) AvatarMale else AvatarFemale
 
-    Column(
+    // 빠른 납부 모드일 때 배경색 결정
+    val backgroundColor = when {
+        isQuickPaymentMode && isSelected -> PrimaryLight
+        isPaid -> SuccessLight
+        else -> DangerLight
+    }
+
+    Box(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isPaid) SuccessLight else DangerLight)
+            .background(backgroundColor)
             .clickable { onClick() }
-            .padding(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
+        Column(
             modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(avatarBackground),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(avatarBackground),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = member.name.first().toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = avatarColor
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = member.name.first().toString(),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = avatarColor
+                text = member.name,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center
             )
+            if (isPaid) {
+                Text(
+                    text = formatAmount(memberPayment.amount),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Success
+                )
+            } else {
+                Text(
+                    text = "미납",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Danger
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = member.name,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium,
-            textAlign = TextAlign.Center
-        )
-        if (isPaid) {
-            Text(
-                text = formatAmount(memberPayment.amount),
-                style = MaterialTheme.typography.labelSmall,
-                color = Success
-            )
-        } else {
-            Text(
-                text = "미납",
-                style = MaterialTheme.typography.labelSmall,
-                color = Danger
-            )
+        // 빠른 납부 모드에서 선택 아이콘 표시
+        if (isQuickPaymentMode && isSelected) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .background(Primary),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = "선택됨",
+                    tint = Color.White,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
         }
     }
 }

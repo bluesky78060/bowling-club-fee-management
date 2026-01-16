@@ -12,6 +12,7 @@ import com.bowlingclub.fee.domain.model.OcrResult
 import com.bowlingclub.fee.domain.model.PlayerScore
 import com.bowlingclub.fee.domain.model.Score
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,15 +49,22 @@ class OcrViewModel @Inject constructor(
     private val scoreRepository: ScoreRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "OcrViewModel"
+    }
+
     private val _uiState = MutableStateFlow(OcrUiState())
     val uiState: StateFlow<OcrUiState> = _uiState.asStateFlow()
+
+    private var membersJob: Job? = null
 
     init {
         loadActiveMembers()
     }
 
     private fun loadActiveMembers() {
-        viewModelScope.launch {
+        membersJob?.cancel()
+        membersJob = viewModelScope.launch {
             val members = memberRepository.getMembersByStatus(MemberStatus.ACTIVE).first()
             _uiState.update { it.copy(activeMembers = members) }
         }
@@ -151,12 +159,17 @@ class OcrViewModel @Inject constructor(
     fun selectMemberForScore(index: Int, memberId: Long) {
         val member = _uiState.value.activeMembers.find { it.id == memberId }
 
+        if (member == null) {
+            _uiState.update { it.copy(errorMessage = "회원을 찾을 수 없습니다") }
+            return
+        }
+
         _uiState.update { state ->
             val updatedScores = state.matchedScores.toMutableList()
-            if (index < updatedScores.size) {
+            if (index in updatedScores.indices) {
                 updatedScores[index] = updatedScores[index].copy(
                     selectedMemberId = memberId,
-                    selectedMemberName = member?.name,
+                    selectedMemberName = member.name,
                     isMatched = true
                 )
             }
@@ -170,7 +183,7 @@ class OcrViewModel @Inject constructor(
     fun clearMemberSelection(index: Int) {
         _uiState.update { state ->
             val updatedScores = state.matchedScores.toMutableList()
-            if (index < updatedScores.size) {
+            if (index in updatedScores.indices) {
                 updatedScores[index] = updatedScores[index].copy(
                     selectedMemberId = null,
                     selectedMemberName = null,
@@ -219,7 +232,14 @@ class OcrViewModel @Inject constructor(
 
                 val result = scoreRepository.insertScores(scoresToSave)
 
-                if (result.isSuccess) {
+                if (result.logErrorIfFailed(TAG, "Save recognized scores")) {
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            errorMessage = "점수 저장에 실패했습니다."
+                        )
+                    }
+                } else {
                     _uiState.update {
                         it.copy(
                             isSaving = false,
@@ -227,13 +247,6 @@ class OcrViewModel @Inject constructor(
                             successMessage = "${scoresToSave.size}개의 점수가 저장되었습니다.",
                             ocrResult = null,
                             matchedScores = emptyList()
-                        )
-                    }
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            isSaving = false,
-                            errorMessage = "점수 저장에 실패했습니다."
                         )
                     }
                 }
@@ -269,6 +282,7 @@ class OcrViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        membersJob?.cancel()
         hybridOcrRepository.close()
     }
 }

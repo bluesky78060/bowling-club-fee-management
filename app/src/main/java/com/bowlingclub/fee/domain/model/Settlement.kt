@@ -41,7 +41,8 @@ data class SettlementMember(
     val settlementId: Long,
     val memberId: Long,
     val amount: Int,
-    val excludeFood: Boolean = false,
+    val excludeFood: Boolean = false,  // 식비 제외 여부 (게임만 치는 사람)
+    val excludeGame: Boolean = false,  // 게임비 제외 여부 (식사만 하는 사람)
     val hasPenalty: Boolean = false,  // 벌금 대상 여부
     val isDiscounted: Boolean = false,  // 감면 대상자 여부 (게임비 반값)
     val isPaid: Boolean = false,

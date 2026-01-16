@@ -699,9 +699,17 @@ private fun SettlementDetailScreen(
                             }
                             Spacer(modifier = Modifier.height(12.dp))
 
+                            // 팀전 정보 (meeting에서 가져옴)
+                            val isTeamMatch = meeting?.isTeamMatch == true
+                            val winnerTeamIds = meeting?.winnerTeamMemberIds ?: emptySet()
+                            val loserTeamIds = meeting?.loserTeamMemberIds ?: emptySet()
+
                             details.members.forEach { memberData ->
                                 // 편의 프로퍼티 사용
                                 val memberAmount = if (memberData.amount > 0) memberData.amount else settlement.perPerson
+                                // 팀전 정보
+                                val isWinnerTeam = isTeamMatch && memberData.member.id in winnerTeamIds
+                                val isLoserTeam = isTeamMatch && memberData.member.id in loserTeamIds
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -737,6 +745,38 @@ private fun SettlementDetailScreen(
                                                 text = memberData.member.name,
                                                 style = MaterialTheme.typography.bodyLarge
                                             )
+                                            // 이긴팀 태그
+                                            if (isWinnerTeam) {
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(Color(0xFF2196F3).copy(alpha = 0.1f))
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "이긴팀",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = Color(0xFF2196F3)
+                                                    )
+                                                }
+                                            }
+                                            // 진팀 태그
+                                            if (isLoserTeam) {
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(Color(0xFFFF9800).copy(alpha = 0.1f))
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "진팀",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = Color(0xFFFF9800)
+                                                    )
+                                                }
+                                            }
                                             if (memberData.hasPenalty) {
                                                 Spacer(modifier = Modifier.width(8.dp))
                                                 Box(
@@ -767,6 +807,21 @@ private fun SettlementDetailScreen(
                                                     )
                                                 }
                                             }
+                                            if (memberData.isExcludeGame) {
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(Primary.copy(alpha = 0.1f))
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "게임제외",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = Primary
+                                                    )
+                                                }
+                                            }
                                             if (memberData.isDiscounted) {
                                                 Spacer(modifier = Modifier.width(8.dp))
                                                 Box(
@@ -783,11 +838,44 @@ private fun SettlementDetailScreen(
                                                 }
                                             }
                                         }
+                                        // 금액과 계산식 표시
                                         Text(
                                             text = formatAmount(memberAmount),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = if (memberData.hasPenalty) Danger else if (memberData.isDiscounted) Success else if (memberData.isExcludeFood) Warning else Gray500
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (memberData.hasPenalty) Danger else if (memberData.isDiscounted) Success else if (memberData.isExcludeFood) Warning else if (memberData.isExcludeGame) Primary else Gray500
                                         )
+                                        // 계산식 세부 내역 표시
+                                        val breakdownParts = mutableListOf<String>()
+
+                                        // 게임비 (게임 제외가 아닌 경우에만)
+                                        if (!memberData.isExcludeGame && settlement.gameFee > 0) {
+                                            val gameLabel = if (memberData.isDiscounted) "게임비(50%)" else "게임비"
+                                            breakdownParts.add(gameLabel)
+                                        }
+
+                                        // 기타비용
+                                        if (settlement.otherFee > 0) {
+                                            breakdownParts.add("기타")
+                                        }
+
+                                        // 식비 (식비 제외가 아닌 경우에만)
+                                        if (!memberData.isExcludeFood && settlement.foodFee > 0) {
+                                            breakdownParts.add("식비")
+                                        }
+
+                                        // 벌금
+                                        if (memberData.hasPenalty) {
+                                            breakdownParts.add("벌금")
+                                        }
+
+                                        if (breakdownParts.isNotEmpty()) {
+                                            Text(
+                                                text = breakdownParts.joinToString(" + "),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Gray400
+                                            )
+                                        }
                                     }
 
                                     // 금액 수정 버튼

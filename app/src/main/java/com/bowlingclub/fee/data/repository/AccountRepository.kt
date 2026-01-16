@@ -60,6 +60,11 @@ class AccountRepository @Inject constructor(
     suspend fun insert(account: Account): Result<Long> =
         Result.runCatching { accountDao.insert(AccountEntity.fromDomain(account)) }
 
+    suspend fun insertAll(accounts: List<Account>): Result<Unit> =
+        Result.runCatching {
+            accountDao.insertAll(accounts.map { AccountEntity.fromDomain(it) })
+        }
+
     suspend fun update(account: Account): Result<Unit> =
         Result.runCatching { accountDao.update(AccountEntity.fromDomain(account)) }
 

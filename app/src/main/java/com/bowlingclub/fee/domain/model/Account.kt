@@ -31,9 +31,10 @@ object IncomeCategory {
     const val SETTLEMENT = "정산금"
     const val DONATION = "찬조금"
     const val SPECIAL = "특별징수"
+    const val PRIZE = "대회시상금"
     const val OTHER = "기타수입"
 
-    val all = listOf(MEMBERSHIP_FEE, SETTLEMENT, DONATION, SPECIAL, OTHER)
+    val all = listOf(MEMBERSHIP_FEE, SETTLEMENT, DONATION, SPECIAL, PRIZE, OTHER)
 }
 
 object ExpenseCategory {
@@ -41,7 +42,8 @@ object ExpenseCategory {
     const val FOOD = "식비"
     const val PRIZE = "경품비"
     const val SUPPLIES = "용품비"
+    const val COMPETITION = "대회찬조"
     const val OTHER = "기타지출"
 
-    val all = listOf(LANE_FEE, FOOD, PRIZE, SUPPLIES, OTHER)
+    val all = listOf(LANE_FEE, FOOD, PRIZE, SUPPLIES, COMPETITION, OTHER)
 }

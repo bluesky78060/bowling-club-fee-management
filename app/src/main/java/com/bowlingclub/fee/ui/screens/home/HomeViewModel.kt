@@ -41,6 +41,11 @@ class HomeViewModel @Inject constructor(
     private val scoreRepository: ScoreRepository
 ) : ViewModel() {
 
+    companion object {
+        private const val HOME_RANKING_LIMIT = 3
+        private const val RECENT_TRANSACTIONS_LIMIT = 5
+    }
+
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
@@ -75,7 +80,7 @@ class HomeViewModel @Inject constructor(
                     monthlyIncome = income ?: 0,
                     monthlyExpense = expense ?: 0,
                     activeMemberCount = memberCount,
-                    recentTransactions = transactions.take(5),
+                    recentTransactions = transactions.take(RECENT_TRANSACTIONS_LIMIT),
                     topRankings = rankings,
                     isLoading = false
                 )
@@ -86,7 +91,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun loadTopRankings(): List<RankingData> {
-        val result = scoreRepository.getTopAverageRankings(3)
+        val result = scoreRepository.getTopAverageRankings(HOME_RANKING_LIMIT)
         return if (result.isSuccess) {
             result.getOrNull()?.mapIndexed { index, ranking ->
                 RankingData(

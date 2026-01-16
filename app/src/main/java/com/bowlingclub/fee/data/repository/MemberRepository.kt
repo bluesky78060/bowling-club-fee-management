@@ -31,14 +31,24 @@ class MemberRepository @Inject constructor(
             .catch { emit(emptyList()) }
 
     fun searchMembers(query: String): Flow<List<Member>> {
-        // Escape SQL LIKE special characters to prevent injection
-        val escapedQuery = query
-            .replace("\\", "\\\\")
-            .replace("%", "\\%")
-            .replace("_", "\\_")
+        // Room uses parameterized queries (prepared statements) which are SQL injection safe.
+        // We only escape LIKE wildcards (%, _, \) to ensure literal matching, not for SQL injection prevention.
+        val escapedQuery = escapeLikeWildcards(query)
         return memberDao.searchMembers(escapedQuery)
             .map { entities -> entities.map { it.toDomain() } }
             .catch { emit(emptyList()) }
+    }
+
+    companion object {
+        /**
+         * Escapes LIKE pattern wildcards for literal string matching.
+         * This is NOT for SQL injection prevention (Room's parameterized queries handle that).
+         * This ensures '%' and '_' in user input are treated as literal characters.
+         */
+        fun escapeLikeWildcards(input: String): String = input
+            .replace("\\", "\\\\")  // Escape the escape character first
+            .replace("%", "\\%")    // Escape LIKE wildcard
+            .replace("_", "\\_")    // Escape LIKE single-char wildcard
     }
 
     fun getMemberCountByStatus(status: MemberStatus): Flow<Int> =

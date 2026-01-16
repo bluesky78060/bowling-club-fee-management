@@ -24,6 +24,9 @@ interface MemberDao {
     @Query("SELECT * FROM members WHERE id = :id")
     suspend fun getMemberById(id: Long): MemberEntity?
 
+    @Query("SELECT * FROM members WHERE id IN (:ids)")
+    suspend fun getMembersByIds(ids: List<Long>): List<MemberEntity>
+
     @Query("""
         SELECT * FROM members
         WHERE name LIKE '%' || :query || '%' ESCAPE '\'
