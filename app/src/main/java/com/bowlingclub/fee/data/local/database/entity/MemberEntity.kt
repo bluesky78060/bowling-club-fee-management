@@ -32,6 +32,9 @@ data class MemberEntity(
 
     val status: String = MemberStatus.ACTIVE.dbValue,
 
+    @ColumnInfo(name = "is_discounted", defaultValue = "0")
+    val isDiscounted: Boolean = false,
+
     val memo: String = "",
 
     @ColumnInfo(name = "created_at")
@@ -49,6 +52,7 @@ data class MemberEntity(
         initialAverage = initialAverage,
         handicap = handicap,
         status = MemberStatus.fromDbValue(status),
+        isDiscounted = isDiscounted,
         memo = memo,
         createdAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(createdAt), ZoneId.systemDefault()),
         updatedAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(updatedAt), ZoneId.systemDefault())
@@ -64,6 +68,7 @@ data class MemberEntity(
             initialAverage = member.initialAverage,
             handicap = member.handicap,
             status = member.status.dbValue,
+            isDiscounted = member.isDiscounted,
             memo = member.memo,
             createdAt = member.createdAt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
             updatedAt = System.currentTimeMillis()

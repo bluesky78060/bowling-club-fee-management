@@ -22,6 +22,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -81,6 +83,7 @@ fun MemberFormScreen(
     var initialAverage by remember { mutableStateOf(member?.initialAverage?.toString() ?: "150") }
     var handicap by remember { mutableStateOf(member?.handicap?.toString() ?: "0") }
     var status by remember { mutableStateOf(member?.status ?: MemberStatus.ACTIVE) }
+    var isDiscounted by remember { mutableStateOf(member?.isDiscounted ?: false) }
     var memo by remember { mutableStateOf(member?.memo ?: "") }
 
     var showDatePicker by remember { mutableStateOf(false) }
@@ -223,6 +226,36 @@ fun MemberFormScreen(
                 )
             }
 
+            // Discounted (감면 대상자)
+            FormSection(title = "감면 대상자") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White)
+                        .clickable { isDiscounted = !isDiscounted }
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = isDiscounted,
+                        onCheckedChange = { isDiscounted = it },
+                        colors = CheckboxDefaults.colors(checkedColor = Primary)
+                    )
+                    Column {
+                        Text(
+                            text = "게임비 감면 대상자",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            text = "65세 이상, 장애인, 기초생활수급자 등 (게임비 50% 감면)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Gray500
+                        )
+                    }
+                }
+            }
+
             // Status (only in edit mode)
             if (isEditMode) {
                 FormSection(title = "상태") {
@@ -283,6 +316,7 @@ fun MemberFormScreen(
                             initialAverage = initialAverage.toIntOrNull() ?: 150,
                             handicap = handicap.toIntOrNull() ?: 0,
                             status = status,
+                            isDiscounted = isDiscounted,
                             memo = memo.trim()
                         )
                         onSave(newMember)

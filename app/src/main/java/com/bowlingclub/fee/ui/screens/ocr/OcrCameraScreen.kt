@@ -27,11 +27,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.exifinterface.media.ExifInterface
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -71,6 +77,20 @@ fun OcrCameraScreen(
 
     var hasCameraPermission by remember { mutableStateOf(false) }
 
+    // 갤러리에서 이미지 선택 런처
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                val bitmap = loadBitmapFromUri(context, it)
+                bitmap?.let { bmp -> onImageCaptured(bmp) }
+            } catch (e: Exception) {
+                Log.e("OcrCamera", "갤러리 이미지 로드 실패", e)
+            }
+        }
+    }
+
     // 간단한 권한 체크 (accompanist 없이)
     LaunchedEffect(Unit) {
         hasCameraPermission = ContextCompat.checkSelfPermission(
@@ -82,7 +102,8 @@ fun OcrCameraScreen(
     if (!hasCameraPermission) {
         CameraPermissionRequest(
             onPermissionGranted = { hasCameraPermission = true },
-            onNavigateBack = onNavigateBack
+            onNavigateBack = onNavigateBack,
+            onGalleryClick = { galleryLauncher.launch("image/*") }
         )
     } else {
         CameraPreviewContent(
@@ -90,7 +111,8 @@ fun OcrCameraScreen(
             lifecycleOwner = lifecycleOwner,
             isProcessing = isProcessing,
             onImageCaptured = onImageCaptured,
-            onNavigateBack = onNavigateBack
+            onNavigateBack = onNavigateBack,
+            onGalleryClick = { galleryLauncher.launch("image/*") }
         )
     }
 }
@@ -98,9 +120,9 @@ fun OcrCameraScreen(
 @Composable
 private fun CameraPermissionRequest(
     onPermissionGranted: () -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onGalleryClick: () -> Unit
 ) {
-    val context = LocalContext.current
     val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -138,7 +160,7 @@ private fun CameraPermissionRequest(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "점수표를 스캔하려면 카메라 접근 권한을 허용해주세요.",
+            text = "점수표를 스캔하려면 카메라 접근 권한을 허용해주세요.\n또는 갤러리에서 사진을 선택할 수 있습니다.",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -157,6 +179,19 @@ private fun CameraPermissionRequest(
             }
 
             Button(
+                onClick = onGalleryClick,
+                colors = ButtonDefaults.filledTonalButtonColors()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PhotoLibrary,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("갤러리")
+            }
+
+            Button(
                 onClick = { launcher.launch(Manifest.permission.CAMERA) }
             ) {
                 Text("권한 허용")
@@ -171,7 +206,8 @@ private fun CameraPreviewContent(
     lifecycleOwner: LifecycleOwner,
     isProcessing: Boolean,
     onImageCaptured: (Bitmap) -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onGalleryClick: () -> Unit
 ) {
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     var isFlashOn by remember { mutableStateOf(false) }
@@ -207,12 +243,15 @@ private fun CameraPreviewContent(
                 cameraProviderFuture.addListener({
                     val cameraProvider = cameraProviderFuture.get()
 
-                    val preview = Preview.Builder().build().also {
-                        it.surfaceProvider = previewView.surfaceProvider
-                    }
+                    val preview = Preview.Builder()
+                        .setTargetRotation(previewView.display.rotation)
+                        .build().also {
+                            it.surfaceProvider = previewView.surfaceProvider
+                        }
 
                     val imageCaptureBuilder = ImageCapture.Builder()
                         .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                        .setTargetRotation(previewView.display.rotation)
 
                     imageCapture = imageCaptureBuilder.build()
 
@@ -279,37 +318,31 @@ private fun CameraPreviewContent(
                 }
             }
 
-            // Guide Frame Area
+            // 전체 화면 촬영 안내
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                // Guide Frame
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.9f)
-                        .height(300.dp)
-                        .border(
-                            width = 2.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(12.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (!isProcessing) {
+                if (!isProcessing) {
+                    Surface(
+                        modifier = Modifier.padding(16.dp),
+                        color = Color.Black.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
                         Column(
+                            modifier = Modifier.padding(16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "점수표를 프레임 안에 맞춰주세요",
+                                text = "점수표가 화면에 잘 보이도록 촬영하세요",
                                 color = Color.White,
                                 style = MaterialTheme.typography.bodyMedium
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "글자가 선명하게 보이도록 촬영해주세요",
+                                text = "글자가 선명하게 보일수록 인식률이 높아집니다",
                                 color = Color.White.copy(alpha = 0.7f),
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -341,40 +374,87 @@ private fun CameraPreviewContent(
                             style = MaterialTheme.typography.bodyMedium
                         )
                     } else {
-                        // Capture Button
-                        Button(
-                            onClick = {
-                                imageCapture?.let { capture ->
-                                    capture.flashMode = if (isFlashOn) {
-                                        ImageCapture.FLASH_MODE_ON
-                                    } else {
-                                        ImageCapture.FLASH_MODE_OFF
-                                    }
-
-                                    captureImage(
-                                        imageCapture = capture,
-                                        executor = cameraExecutor,
-                                        onImageCaptured = onImageCaptured
+                        // 버튼 영역 (갤러리 + 촬영)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // 갤러리 버튼
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Button(
+                                    onClick = onGalleryClick,
+                                    modifier = Modifier.size(56.dp),
+                                    shape = CircleShape,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.White.copy(alpha = 0.2f)
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PhotoLibrary,
+                                        contentDescription = "갤러리",
+                                        modifier = Modifier.size(24.dp),
+                                        tint = Color.White
                                     )
                                 }
-                            },
-                            modifier = Modifier.size(72.dp),
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CameraAlt,
-                                contentDescription = "촬영",
-                                modifier = Modifier.size(32.dp)
-                            )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "갤러리",
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+
+                            // 촬영 버튼
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Button(
+                                    onClick = {
+                                        imageCapture?.let { capture ->
+                                            capture.flashMode = if (isFlashOn) {
+                                                ImageCapture.FLASH_MODE_ON
+                                            } else {
+                                                ImageCapture.FLASH_MODE_OFF
+                                            }
+
+                                            captureImage(
+                                                imageCapture = capture,
+                                                executor = cameraExecutor,
+                                                onImageCaptured = onImageCaptured
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier.size(72.dp),
+                                    shape = CircleShape,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CameraAlt,
+                                        contentDescription = "촬영",
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "촬영",
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+
+                            // 균형을 위한 빈 공간
+                            Spacer(modifier = Modifier.size(56.dp))
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = "촬영 버튼을 눌러 점수표를 스캔하세요",
+                            text = "촬영하거나 갤러리에서 점수표를 선택하세요",
                             color = Color.White.copy(alpha = 0.7f),
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -470,14 +550,98 @@ private fun imageProxyToBitmap(imageProxy: ImageProxy): Bitmap? {
     val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
         ?: return null
 
-    // 회전 보정
+    // 회전 보정 - CameraX는 기기 방향에 따라 rotationDegrees를 제공
     val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+    Log.d("OcrCamera", "캡처된 이미지: ${bitmap.width}x${bitmap.height}, 회전: ${rotationDegrees}도")
+
     return if (rotationDegrees != 0) {
         val matrix = Matrix().apply { postRotate(rotationDegrees.toFloat()) }
         val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        Log.d("OcrCamera", "회전 후 이미지: ${rotatedBitmap.width}x${rotatedBitmap.height}")
         bitmap.recycle() // 원본 메모리 해제
         rotatedBitmap
     } else {
         bitmap
+    }
+}
+
+/**
+ * 갤러리에서 이미지를 로드하고 EXIF 회전 정보를 적용
+ * 또한 메모리 효율을 위해 큰 이미지는 리사이즈
+ */
+private fun loadBitmapFromUri(context: Context, uri: Uri): Bitmap? {
+    try {
+        // 1. 이미지 크기 확인 (디코딩하지 않고)
+        val options = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            BitmapFactory.decodeStream(inputStream, null, options)
+        }
+
+        val imageWidth = options.outWidth
+        val imageHeight = options.outHeight
+        Log.d("OcrCamera", "갤러리 이미지 원본 크기: ${imageWidth}x${imageHeight}")
+
+        // 2. 샘플 사이즈 계산 (최대 2048px 기준)
+        val maxDimension = 2048
+        var sampleSize = 1
+        while (imageWidth / sampleSize > maxDimension || imageHeight / sampleSize > maxDimension) {
+            sampleSize *= 2
+        }
+
+        // 3. 실제 이미지 로드 (샘플 사이즈 적용)
+        val loadOptions = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+        }
+        var bitmap: Bitmap? = null
+        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            bitmap = BitmapFactory.decodeStream(inputStream, null, loadOptions)
+        }
+
+        if (bitmap == null) {
+            Log.e("OcrCamera", "비트맵 디코딩 실패")
+            return null
+        }
+
+        Log.d("OcrCamera", "로드된 이미지 크기: ${bitmap!!.width}x${bitmap!!.height}, sampleSize: $sampleSize")
+
+        // 4. EXIF 회전 정보 읽기 및 적용
+        val rotation = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            try {
+                val exif = ExifInterface(inputStream)
+                val orientation = exif.getAttributeInt(
+                    ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_NORMAL
+                )
+                when (orientation) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                    ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                    ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                    else -> 0f
+                }
+            } catch (e: Exception) {
+                Log.w("OcrCamera", "EXIF 정보 읽기 실패", e)
+                0f
+            }
+        } ?: 0f
+
+        Log.d("OcrCamera", "EXIF 회전 정보: ${rotation}도")
+
+        // 5. 회전 적용
+        return if (rotation != 0f) {
+            val matrix = Matrix().apply { postRotate(rotation) }
+            val rotatedBitmap = Bitmap.createBitmap(bitmap!!, 0, 0, bitmap!!.width, bitmap!!.height, matrix, true)
+            Log.d("OcrCamera", "회전 후 이미지: ${rotatedBitmap.width}x${rotatedBitmap.height}")
+            if (rotatedBitmap != bitmap) {
+                bitmap!!.recycle()
+            }
+            rotatedBitmap
+        } else {
+            bitmap
+        }
+    } catch (e: Exception) {
+        Log.e("OcrCamera", "이미지 로드 중 오류", e)
+        return null
     }
 }

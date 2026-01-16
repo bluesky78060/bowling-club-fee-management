@@ -23,15 +23,18 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
@@ -61,6 +64,7 @@ import com.bowlingclub.fee.ui.theme.Warning
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScoreScreen(
     viewModel: ScoreViewModel = hiltViewModel(),
@@ -74,16 +78,29 @@ fun ScoreScreen(
     val dateFormatter = DateTimeFormatter.ofPattern("M/d")
 
     Scaffold(
-        floatingActionButton = {
-            if (selectedTab == 0) {
-                FloatingActionButton(
-                    onClick = onAddMeeting,
-                    containerColor = Primary,
-                    contentColor = Color.White
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "모임 추가")
-                }
-            }
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "점수 관리",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                actions = {
+                    if (selectedTab == 0) {
+                        IconButton(onClick = onAddMeeting) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "모임 추가",
+                                tint = Primary
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = BackgroundSecondary
+                )
+            )
         },
         containerColor = BackgroundSecondary
     ) { paddingValues ->
@@ -92,15 +109,6 @@ fun ScoreScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Header
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "점수 관리",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
             // Tab Row
             TabRow(
                 selectedTabIndex = selectedTab,

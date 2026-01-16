@@ -17,11 +17,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,6 +32,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -52,6 +55,7 @@ import com.bowlingclub.fee.domain.model.Account
 import com.bowlingclub.fee.domain.model.AccountType
 import com.bowlingclub.fee.domain.model.ExpenseCategory
 import com.bowlingclub.fee.domain.model.IncomeCategory
+import com.bowlingclub.fee.ui.components.formatAmount
 import com.bowlingclub.fee.ui.theme.BackgroundSecondary
 import com.bowlingclub.fee.ui.theme.Danger
 import com.bowlingclub.fee.ui.theme.Gray200
@@ -69,6 +73,7 @@ import java.time.format.DateTimeFormatter
 fun AccountFormScreen(
     account: Account? = null,
     onSave: (Account) -> Unit,
+    onDelete: ((Account) -> Unit)? = null,
     onBack: () -> Unit
 ) {
     val isEdit = account != null
@@ -91,6 +96,7 @@ fun AccountFormScreen(
 
     var showCategoryDropdown by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     var amountError by remember { mutableStateOf<String?>(null) }
     var descriptionError by remember { mutableStateOf<String?>(null) }
@@ -110,6 +116,17 @@ fun AccountFormScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
+                    }
+                },
+                actions = {
+                    if (isEdit && onDelete != null) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "삭제",
+                                tint = Danger
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -354,6 +371,37 @@ fun AccountFormScreen(
         ) {
             DatePicker(state = datePickerState)
         }
+    }
+
+    // Delete Confirmation Dialog
+    if (showDeleteDialog && account != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = {
+                Text(
+                    text = "거래 삭제",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text("이 거래 내역을 삭제하시겠습니까?\n\n• ${account.description}\n• ${formatAmount(account.amount)}")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDelete?.invoke(account)
+                    }
+                ) {
+                    Text("삭제", color = Danger)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("취소")
+                }
+            }
+        )
     }
 }
 

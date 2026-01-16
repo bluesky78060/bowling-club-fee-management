@@ -3,7 +3,7 @@ package com.bowlingclub.fee.ui.screens.receipt
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bowlingclub.fee.data.ocr.ReceiptOcrRepository
+import com.bowlingclub.fee.data.ocr.HybridOcrRepository
 import com.bowlingclub.fee.data.repository.AccountRepository
 import com.bowlingclub.fee.domain.model.Account
 import com.bowlingclub.fee.domain.model.AccountType
@@ -32,7 +32,7 @@ data class ReceiptOcrUiState(
 
 @HiltViewModel
 class ReceiptOcrViewModel @Inject constructor(
-    private val receiptOcrRepository: ReceiptOcrRepository,
+    private val hybridOcrRepository: HybridOcrRepository,
     private val accountRepository: AccountRepository
 ) : ViewModel() {
 
@@ -52,7 +52,7 @@ class ReceiptOcrViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isProcessing = true, errorMessage = null) }
 
-            val result = receiptOcrRepository.recognizeReceiptWithPreprocessing(bitmap)
+            val result = hybridOcrRepository.recognizeReceipt(bitmap)
 
             if (result.isSuccess) {
                 val receiptResult = result.getOrNull()
@@ -207,6 +207,6 @@ class ReceiptOcrViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        receiptOcrRepository.close()
+        hybridOcrRepository.close()
     }
 }

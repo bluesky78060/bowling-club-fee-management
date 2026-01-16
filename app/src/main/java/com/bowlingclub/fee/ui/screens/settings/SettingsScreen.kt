@@ -1,6 +1,8 @@
 package com.bowlingclub.fee.ui.screens.settings
 
+import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -65,8 +67,10 @@ import com.bowlingclub.fee.ui.theme.Gray200
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Gray600
 import com.bowlingclub.fee.ui.theme.Primary
+import com.bowlingclub.fee.ui.theme.Warning
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlin.system.exitProcess
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,6 +108,28 @@ fun SettingsScreen(
         }
     }
 
+    // 데이터베이스 백업 런처
+    val dbBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        uri?.let {
+            viewModel.exportDatabase(it)
+        }
+    }
+
+    // 데이터베이스 복원용 임시 Uri 상태
+    var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
+
+    // 데이터베이스 복원 런처
+    val dbRestoreLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            pendingRestoreUri = it
+            viewModel.showRestoreDialog()
+        }
+    }
+
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -130,6 +156,50 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.hideResetDialog() }) {
+                    Text("취소")
+                }
+            }
+        )
+    }
+
+    // 데이터베이스 복원 확인 다이얼로그
+    if (uiState.showRestoreDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.hideRestoreDialog() },
+            title = { Text("데이터베이스 복원") },
+            text = {
+                Column {
+                    Text("현재 데이터가 모두 삭제되고 백업 파일의 데이터로 교체됩니다.")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?",
+                        color = Danger,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingRestoreUri?.let { uri ->
+                            viewModel.importDatabase(uri) {
+                                // 앱 재시작
+                                (context as? Activity)?.let { activity ->
+                                    val intent = activity.packageManager.getLaunchIntentForPackage(activity.packageName)
+                                    intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    activity.startActivity(intent)
+                                    activity.finish()
+                                    exitProcess(0)
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    Text("복원", color = Danger)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.hideRestoreDialog() }) {
                     Text("취소")
                 }
             }
@@ -205,8 +275,35 @@ fun SettingsScreen(
                     )
                 }
 
-                // 데이터 관리
-                SettingsSection(title = "데이터 관리") {
+                // 데이터베이스 백업/복원
+                SettingsSection(title = "데이터베이스 백업") {
+                    SettingsInfoItem(
+                        label = "데이터베이스 크기",
+                        value = uiState.databaseSize
+                    )
+                    HorizontalDivider(color = Gray200)
+                    SettingsClickableItem(
+                        icon = "💾",
+                        label = "데이터베이스 백업",
+                        description = "회원, 정산 등 모든 데이터를 파일로 저장",
+                        onClick = {
+                            dbBackupLauncher.launch(viewModel.generateBackupFileName())
+                        }
+                    )
+                    HorizontalDivider(color = Gray200)
+                    SettingsClickableItem(
+                        icon = "📂",
+                        label = "데이터베이스 복원",
+                        description = "백업 파일에서 데이터 복원 (앱 재시작 필요)",
+                        onClick = {
+                            dbRestoreLauncher.launch(arrayOf("application/octet-stream", "*/*"))
+                        },
+                        isWarning = true
+                    )
+                }
+
+                // 설정 관리
+                SettingsSection(title = "설정 관리") {
                     SettingsClickableItem(
                         icon = "📤",
                         label = "설정 내보내기",
@@ -333,7 +430,13 @@ private fun SettingsNumberField(
     suffix: String,
     onValueChange: (Int) -> Unit
 ) {
-    var text by remember(value) { mutableStateOf(value.toString()) }
+    // 천단위 콤마 포맷팅 함수
+    fun formatWithComma(num: Int): String = "%,d".format(num)
+
+    // 콤마 제거하고 숫자만 추출
+    fun parseNumber(text: String): Int = text.filter { it.isDigit() }.toIntOrNull() ?: 0
+
+    var text by remember(value) { mutableStateOf(formatWithComma(value)) }
 
     Row(
         modifier = Modifier
@@ -355,8 +458,10 @@ private fun SettingsNumberField(
             OutlinedTextField(
                 value = text,
                 onValueChange = { newValue ->
-                    text = newValue.filter { it.isDigit() }
-                    text.toIntOrNull()?.let { onValueChange(it) }
+                    val digitsOnly = newValue.filter { it.isDigit() }
+                    val number = digitsOnly.toIntOrNull() ?: 0
+                    text = if (digitsOnly.isEmpty()) "" else formatWithComma(number)
+                    onValueChange(number)
                 },
                 modifier = Modifier.width(120.dp),
                 singleLine = true,
@@ -383,8 +488,20 @@ private fun SettingsClickableItem(
     label: String,
     description: String,
     onClick: () -> Unit,
-    isDanger: Boolean = false
+    isDanger: Boolean = false,
+    isWarning: Boolean = false
 ) {
+    val bgColor = when {
+        isDanger -> Danger.copy(alpha = 0.1f)
+        isWarning -> Warning.copy(alpha = 0.1f)
+        else -> Primary.copy(alpha = 0.1f)
+    }
+    val textColor = when {
+        isDanger -> Danger
+        isWarning -> Warning
+        else -> Color.Unspecified
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -397,7 +514,7 @@ private fun SettingsClickableItem(
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(if (isDanger) Danger.copy(alpha = 0.1f) else Primary.copy(alpha = 0.1f)),
+                .background(bgColor),
             contentAlignment = Alignment.Center
         ) {
             Text(text = icon, style = MaterialTheme.typography.titleMedium)
@@ -407,7 +524,7 @@ private fun SettingsClickableItem(
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (isDanger) Danger else Color.Unspecified
+                color = textColor
             )
             Text(
                 text = description,

@@ -2,9 +2,13 @@ package com.bowlingclub.fee.ui.screens.donation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bowlingclub.fee.data.repository.AccountRepository
 import com.bowlingclub.fee.data.repository.DonationRepository
 import com.bowlingclub.fee.data.repository.MemberRepository
+import com.bowlingclub.fee.domain.model.Account
+import com.bowlingclub.fee.domain.model.AccountType
 import com.bowlingclub.fee.domain.model.Donation
+import com.bowlingclub.fee.domain.model.IncomeCategory
 import com.bowlingclub.fee.domain.model.DonationStatus
 import com.bowlingclub.fee.domain.model.DonationType
 import com.bowlingclub.fee.domain.model.DonorType
@@ -39,7 +43,8 @@ data class DonationUiState(
 @HiltViewModel
 class DonationViewModel @Inject constructor(
     private val donationRepository: DonationRepository,
-    private val memberRepository: MemberRepository
+    private val memberRepository: MemberRepository,
+    private val accountRepository: AccountRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DonationUiState())
@@ -120,6 +125,16 @@ class DonationViewModel @Inject constructor(
             if (result.isError) {
                 _uiState.update { it.copy(errorMessage = "찬조금 등록에 실패했습니다") }
             } else {
+                // 장부에 찬조금 수입 기록
+                val purposeStr = if (purpose.isNotBlank()) " ($purpose)" else ""
+                val account = Account(
+                    type = AccountType.INCOME,
+                    category = IncomeCategory.DONATION,
+                    amount = amount,
+                    date = donationDate,
+                    description = "${donorName} 찬조금${purposeStr}"
+                )
+                accountRepository.insert(account)
                 _uiState.update { it.copy(successMessage = "찬조금이 등록되었습니다") }
             }
         }

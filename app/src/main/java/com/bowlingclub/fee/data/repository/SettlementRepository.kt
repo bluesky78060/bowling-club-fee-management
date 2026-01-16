@@ -88,6 +88,15 @@ class SettlementRepository @Inject constructor(
     suspend fun markAsPaid(settlementId: Long, memberId: Long): Result<Unit> =
         Result.runCatching { settlementDao.markAsPaid(settlementId, memberId) }
 
+    suspend fun markAsUnpaid(settlementId: Long, memberId: Long): Result<Unit> =
+        Result.runCatching { settlementDao.markAsUnpaid(settlementId, memberId) }
+
+    suspend fun togglePaidStatus(settlementId: Long, memberId: Long, currentlyPaid: Boolean): Result<Unit> =
+        if (currentlyPaid) markAsUnpaid(settlementId, memberId) else markAsPaid(settlementId, memberId)
+
+    suspend fun updateMemberAmount(settlementId: Long, memberId: Long, amount: Int): Result<Unit> =
+        Result.runCatching { settlementDao.updateMemberAmount(settlementId, memberId, amount) }
+
     suspend fun deleteSettlementMember(member: SettlementMember): Result<Unit> =
         Result.runCatching { settlementDao.deleteSettlementMember(SettlementMemberEntity.fromDomain(member)) }
 
@@ -96,7 +105,11 @@ class SettlementRepository @Inject constructor(
         settlement: Settlement,
         memberIds: List<Long>,
         excludeFoodMemberIds: List<Long> = emptyList(),
+        penaltyMemberIds: List<Long> = emptyList(),
+        discountedMemberIds: List<Long> = emptyList(),
+        penaltyAmount: Int = 0,
         basePerPerson: Int = settlement.perPerson,
+        discountedBasePerPerson: Int = basePerPerson / 2, // 감면 대상자 게임비 (50%)
         foodPerPerson: Int = 0,
         baseRemainder: Int = 0,
         foodRemainder: Int = 0
@@ -106,7 +119,17 @@ class SettlementRepository @Inject constructor(
 
         val members = memberIds.mapIndexed { index, memberId ->
             val isExcludeFood = excludeFoodMemberIds.contains(memberId)
-            var amount = if (isExcludeFood) basePerPerson else (basePerPerson + foodPerPerson)
+            val hasPenalty = penaltyMemberIds.contains(memberId)
+            val isDiscounted = discountedMemberIds.contains(memberId)
+
+            // 감면 대상자는 게임비 50%, 일반 회원은 100%
+            val gameBasePerson = if (isDiscounted) discountedBasePerPerson else basePerPerson
+            var amount = if (isExcludeFood) gameBasePerson else (gameBasePerson + foodPerPerson)
+
+            // 벌금 대상 회원에게 벌금 금액 추가
+            if (hasPenalty) {
+                amount += penaltyAmount
+            }
 
             // 첫 번째 회원에게 기본 나머지 금액 추가
             if (index == 0 && baseRemainder > 0) {
@@ -123,6 +146,8 @@ class SettlementRepository @Inject constructor(
                 memberId = memberId,
                 amount = amount,
                 excludeFood = isExcludeFood,
+                hasPenalty = hasPenalty,
+                isDiscounted = isDiscounted,
                 isPaid = false
             )
         }

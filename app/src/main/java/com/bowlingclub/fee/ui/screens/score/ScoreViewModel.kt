@@ -273,8 +273,14 @@ class ScoreViewModel @Inject constructor(
         }
     }
 
-    fun addScores(scores: List<Score>) {
+    fun addScores(scores: List<Score>, meetingId: Long? = null) {
         viewModelScope.launch {
+            // 모임 ID가 지정되었거나 점수에서 가져올 수 있으면 기존 점수 삭제
+            val targetMeetingId = meetingId ?: scores.firstOrNull()?.meetingId
+            if (targetMeetingId != null) {
+                scoreRepository.deleteScoresByMeetingId(targetMeetingId)
+            }
+
             val result = scoreRepository.insertScores(scores)
             if (result.isError) {
                 _uiState.update { it.copy(errorMessage = "점수 입력에 실패했습니다") }

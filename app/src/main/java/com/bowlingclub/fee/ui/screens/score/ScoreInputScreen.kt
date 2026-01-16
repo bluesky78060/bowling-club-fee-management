@@ -20,12 +20,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import android.content.Intent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -45,6 +48,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -58,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -70,6 +75,7 @@ import com.bowlingclub.fee.domain.model.Member
 import com.bowlingclub.fee.domain.model.Score
 import com.bowlingclub.fee.ui.theme.BackgroundSecondary
 import com.bowlingclub.fee.ui.theme.Gray200
+import com.bowlingclub.fee.ui.theme.Danger
 import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
@@ -89,15 +95,113 @@ fun ScoreInputScreen(
     meeting: Meeting,
     onSave: () -> Unit,
     onBack: () -> Unit,
-    onOcrScan: (() -> Unit)? = null
+    onOcrScan: (() -> Unit)? = null,
+    onDelete: ((Meeting) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val dateFormatter = DateTimeFormatter.ofPattern("M/d")
+    val context = LocalContext.current
 
     var gameCount by remember { mutableIntStateOf(3) }
     val scoreEntries = remember { mutableStateListOf<ScoreEntry>() }
     var showMemberDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     val selectedMembers = remember { mutableStateMapOf<Long, Boolean>() }
+    var isInitialized by remember { mutableStateOf(false) }
+
+    // 점수 공유 메시지 생성 함수
+    fun generateScoreShareMessage(): String {
+        val sb = StringBuilder()
+        sb.appendLine("🎳 볼링 동호회 점수")
+        sb.appendLine()
+        sb.appendLine("📅 ${meeting.date.format(dateFormatter)} 모임")
+        if (meeting.location.isNotEmpty()) {
+            sb.appendLine("📍 ${meeting.location}")
+        }
+        sb.appendLine()
+
+        // 점수 테이블 헤더
+        val gameHeaders = (1..gameCount).joinToString(" | ") { "${it}G" }
+        sb.appendLine("이름 | $gameHeaders | 평균")
+        sb.appendLine("-".repeat(50))
+
+        // 회원별 점수
+        val sortedEntries = scoreEntries.sortedByDescending { entry ->
+            val validScores = entry.scores.filterNotNull().filter { it > 0 }
+            if (validScores.isNotEmpty()) validScores.average() else 0.0
+        }
+
+        sortedEntries.forEach { entry ->
+            val validScores = entry.scores.filterNotNull().filter { it > 0 }
+            val average = if (validScores.isNotEmpty()) validScores.average() else 0.0
+            val scoreStrs = entry.scores.take(gameCount).map { it?.toString() ?: "-" }
+            val avgStr = if (validScores.isNotEmpty()) String.format("%.1f", average) else "-"
+            sb.appendLine("${entry.memberName} | ${scoreStrs.joinToString(" | ")} | $avgStr")
+        }
+
+        // 하이게임 표시
+        val allScores = scoreEntries.flatMap { entry ->
+            entry.scores.filterNotNull().filter { it > 0 }.map { entry.memberName to it }
+        }
+        val highGame = allScores.maxByOrNull { it.second }
+        if (highGame != null) {
+            sb.appendLine()
+            sb.appendLine("🏆 하이게임: ${highGame.first} (${highGame.second}점)")
+        }
+
+        return sb.toString()
+    }
+
+    // 공유 함수
+    fun shareScores() {
+        val message = generateScoreShareMessage()
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, message)
+            putExtra(Intent.EXTRA_SUBJECT, "볼링 동호회 점수")
+        }
+        context.startActivity(Intent.createChooser(shareIntent, "점수 공유"))
+    }
+
+    // 모임 선택 및 기존 점수 로드
+    LaunchedEffect(meeting.id) {
+        viewModel.selectMeeting(meeting)
+    }
+
+    // 기존 점수를 scoreEntries에 반영
+    LaunchedEffect(uiState.meetingScores, isInitialized) {
+        if (uiState.meetingScores.isNotEmpty() && !isInitialized) {
+            // 기존 점수에서 게임 수 결정
+            val maxGame = uiState.meetingScores.maxOfOrNull { it.gameNumber } ?: 3
+            gameCount = maxOf(gameCount, maxGame)
+
+            // 회원별로 점수 그룹핑
+            val scoresByMember = uiState.meetingScores.groupBy { it.memberId }
+
+            scoresByMember.forEach { (memberId, scores) ->
+                val member = uiState.activeMembers.find { it.id == memberId }
+                val memberName = member?.name ?: "알 수 없음"
+
+                // 기존 entry가 없으면 추가
+                if (scoreEntries.none { it.memberId == memberId }) {
+                    val scoreList = MutableList<Int?>(gameCount) { null }
+                    scores.forEach { score ->
+                        if (score.gameNumber in 1..gameCount) {
+                            scoreList[score.gameNumber - 1] = score.score
+                        }
+                    }
+                    scoreEntries.add(
+                        ScoreEntry(
+                            memberId = memberId,
+                            memberName = memberName,
+                            scores = scoreList
+                        )
+                    )
+                }
+            }
+            isInitialized = true
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -121,6 +225,12 @@ fun ScoreInputScreen(
                     }
                 },
                 actions = {
+                    // 공유 버튼 (점수가 있을 때만 표시)
+                    if (scoreEntries.isNotEmpty()) {
+                        IconButton(onClick = { shareScores() }) {
+                            Icon(Icons.Default.Share, contentDescription = "점수 공유", tint = Primary)
+                        }
+                    }
                     if (onOcrScan != null) {
                         IconButton(onClick = onOcrScan) {
                             Icon(Icons.Default.CameraAlt, contentDescription = "점수표 스캔", tint = Primary)
@@ -128,6 +238,11 @@ fun ScoreInputScreen(
                     }
                     IconButton(onClick = { showMemberDialog = true }) {
                         Icon(Icons.Default.PersonAdd, contentDescription = "회원 추가", tint = Primary)
+                    }
+                    if (onDelete != null) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "모임 삭제", tint = Danger)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -151,9 +266,8 @@ fun ScoreInputScreen(
                             } else null
                         }
                     }
-                    if (scoresToSave.isNotEmpty()) {
-                        viewModel.addScores(scoresToSave)
-                    }
+                    // 기존 점수 삭제 후 새 점수 저장 (중복 방지)
+                    viewModel.addScores(scoresToSave, meeting.id)
                     onSave()
                 },
                 containerColor = Primary,
@@ -417,6 +531,37 @@ fun ScoreInputScreen(
                     }
                 ) {
                     Text("취소", color = Gray500)
+                }
+            }
+        )
+    }
+
+    // Delete Confirmation Dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = {
+                Text(
+                    text = "모임 삭제",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text("이 모임과 입력된 모든 점수 기록이 삭제됩니다.\n\n• ${meeting.date.format(dateFormatter)} 모임\n• ${meeting.location.ifEmpty { "장소 미지정" }}\n\n삭제하시겠습니까?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDelete?.invoke(meeting)
+                    }
+                ) {
+                    Text("삭제", color = Danger)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("취소")
                 }
             }
         )

@@ -66,6 +66,12 @@ interface SettlementDao {
     @Query("UPDATE settlement_members SET is_paid = 1, paid_at = :paidAt WHERE settlement_id = :settlementId AND member_id = :memberId")
     suspend fun markAsPaid(settlementId: Long, memberId: Long, paidAt: Long = System.currentTimeMillis())
 
+    @Query("UPDATE settlement_members SET is_paid = 0, paid_at = NULL WHERE settlement_id = :settlementId AND member_id = :memberId")
+    suspend fun markAsUnpaid(settlementId: Long, memberId: Long)
+
+    @Query("UPDATE settlement_members SET amount = :amount WHERE settlement_id = :settlementId AND member_id = :memberId")
+    suspend fun updateMemberAmount(settlementId: Long, memberId: Long, amount: Int)
+
     @Delete
     suspend fun deleteSettlementMember(member: SettlementMemberEntity)
 

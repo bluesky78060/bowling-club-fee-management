@@ -28,9 +28,13 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -102,8 +106,14 @@ fun SettlementScreen(
     uiState.selectedSettlement?.let { details ->
         SettlementDetailScreen(
             details = details,
-            onMarkPaid = { memberId ->
-                viewModel.markMemberAsPaid(details.settlement.id, memberId)
+            onTogglePaid = { memberId, currentlyPaid ->
+                viewModel.toggleMemberPaidStatus(details.settlement.id, memberId, currentlyPaid)
+            },
+            onUpdateAmount = { memberId, amount ->
+                viewModel.updateMemberAmount(details.settlement.id, memberId, amount)
+            },
+            onUpdateCosts = { gameFee, foodFee, otherFee, memo ->
+                viewModel.updateSettlementCosts(details.settlement.id, gameFee, foodFee, otherFee, memo)
             },
             onComplete = {
                 viewModel.completeSettlement(details.settlement.id)
@@ -140,18 +150,15 @@ fun SettlementScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
                     }
                 },
+                actions = {
+                    IconButton(onClick = onAddSettlement) {
+                        Icon(Icons.Default.Add, contentDescription = "정산 추가", tint = Primary)
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.White
                 )
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddSettlement,
-                containerColor = Primary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "정산 추가", tint = Color.White)
-            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
@@ -338,7 +345,9 @@ private fun SettlementCard(
 @Composable
 private fun SettlementDetailScreen(
     details: SettlementWithDetails,
-    onMarkPaid: (memberId: Long) -> Unit,
+    onTogglePaid: (memberId: Long, currentlyPaid: Boolean) -> Unit,
+    onUpdateAmount: (memberId: Long, amount: Int) -> Unit,
+    onUpdateCosts: (gameFee: Int, foodFee: Int, otherFee: Int, memo: String) -> Unit,
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onCopyMessage: () -> Unit,
@@ -349,6 +358,135 @@ private fun SettlementDetailScreen(
     val meeting = details.meetingInfo?.meeting
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showCompleteDialog by remember { mutableStateOf(false) }
+
+    // 금액 수정 다이얼로그 상태
+    var showAmountEditDialog by remember { mutableStateOf(false) }
+    var editingMember by remember { mutableStateOf<SettlementMemberData?>(null) }
+    var editAmountText by remember { mutableStateOf("") }
+
+    // 비용 수정 다이얼로그 상태
+    var showCostEditDialog by remember { mutableStateOf(false) }
+    var editGameFee by remember { mutableStateOf(settlement.gameFee.toString()) }
+    var editFoodFee by remember { mutableStateOf(settlement.foodFee.toString()) }
+    var editOtherFee by remember { mutableStateOf(settlement.otherFee.toString()) }
+    var editMemo by remember { mutableStateOf(settlement.memo) }
+
+    // 비용 수정 다이얼로그
+    if (showCostEditDialog) {
+        AlertDialog(
+            onDismissRequest = { showCostEditDialog = false },
+            title = { Text("비용 내역 수정") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = editGameFee,
+                        onValueChange = { editGameFee = it.filter { c -> c.isDigit() } },
+                        label = { Text("게임비") },
+                        suffix = { Text("원") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editFoodFee,
+                        onValueChange = { editFoodFee = it.filter { c -> c.isDigit() } },
+                        label = { Text("식비") },
+                        suffix = { Text("원") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editOtherFee,
+                        onValueChange = { editOtherFee = it.filter { c -> c.isDigit() } },
+                        label = { Text("기타비용") },
+                        suffix = { Text("원") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editMemo,
+                        onValueChange = { editMemo = it },
+                        label = { Text("메모") },
+                        singleLine = false,
+                        maxLines = 3,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val gameFee = editGameFee.toIntOrNull() ?: 0
+                        val foodFee = editFoodFee.toIntOrNull() ?: 0
+                        val otherFee = editOtherFee.toIntOrNull() ?: 0
+                        onUpdateCosts(gameFee, foodFee, otherFee, editMemo)
+                        showCostEditDialog = false
+                    }
+                ) {
+                    Text("저장", color = Primary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCostEditDialog = false }) {
+                    Text("취소")
+                }
+            }
+        )
+    }
+
+    // 금액 수정 다이얼로그
+    if (showAmountEditDialog && editingMember != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showAmountEditDialog = false
+                editingMember = null
+            },
+            title = { Text("납부 금액 수정") },
+            text = {
+                Column {
+                    Text(
+                        text = "${editingMember!!.member.name}님의 납부 금액을 수정합니다.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Gray500
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = editAmountText,
+                        onValueChange = { editAmountText = it.filter { c -> c.isDigit() } },
+                        label = { Text("납부 금액") },
+                        suffix = { Text("원") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val amount = editAmountText.toIntOrNull() ?: 0
+                        editingMember?.let { member ->
+                            onUpdateAmount(member.member.id, amount)
+                        }
+                        showAmountEditDialog = false
+                        editingMember = null
+                    }
+                ) {
+                    Text("저장", color = Primary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showAmountEditDialog = false
+                    editingMember = null
+                }) {
+                    Text("취소")
+                }
+            }
+        )
+    }
 
     if (showDeleteDialog) {
         AlertDialog(
@@ -412,10 +550,9 @@ private fun SettlementDetailScreen(
                     IconButton(onClick = onCopyMessage) {
                         Icon(Icons.Default.ContentCopy, contentDescription = "메시지 복사")
                     }
-                    if (settlement.status == SettlementStatus.PENDING) {
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Default.Delete, contentDescription = "삭제", tint = Danger)
-                        }
+                    // 완료된 정산도 삭제 가능
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(Icons.Default.Delete, contentDescription = "삭제", tint = Danger)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -458,11 +595,41 @@ private fun SettlementDetailScreen(
                 item {
                     AppCard {
                         Column {
-                            Text(
-                                text = "비용 내역",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "비용 내역",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                // 수정 버튼 (진행 중 상태일 때만)
+                                if (settlement.status == SettlementStatus.PENDING) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Gray200)
+                                            .clickable {
+                                                editGameFee = settlement.gameFee.toString()
+                                                editFoodFee = settlement.foodFee.toString()
+                                                editOtherFee = settlement.otherFee.toString()
+                                                editMemo = settlement.memo
+                                                showCostEditDialog = true
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "비용 수정",
+                                            tint = Gray500,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
                             Spacer(modifier = Modifier.height(12.dp))
                             CostRow("게임비", settlement.gameFee)
                             if (settlement.foodFee > 0) {
@@ -538,19 +705,18 @@ private fun SettlementDetailScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .let {
-                                            if (!memberData.isPaid && settlement.status == SettlementStatus.PENDING) {
-                                                it.clickable { onMarkPaid(memberData.member.id) }
-                                            } else it
-                                        }
                                         .padding(vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    // 납부 상태 체크박스 (완료된 정산에서도 수정 가능)
                                     Box(
                                         modifier = Modifier
                                             .size(32.dp)
                                             .clip(CircleShape)
-                                            .background(if (memberData.isPaid) Success else Gray200),
+                                            .background(if (memberData.isPaid) Success else Gray200)
+                                            .clickable {
+                                                onTogglePaid(memberData.member.id, memberData.isPaid)
+                                            },
                                         contentAlignment = Alignment.Center
                                     ) {
                                         if (memberData.isPaid) {
@@ -563,12 +729,29 @@ private fun SettlementDetailScreen(
                                         }
                                     }
                                     Spacer(modifier = Modifier.width(12.dp))
+
+                                    // 회원 정보
                                     Column(modifier = Modifier.weight(1f)) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
                                                 text = memberData.member.name,
                                                 style = MaterialTheme.typography.bodyLarge
                                             )
+                                            if (memberData.hasPenalty) {
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(Danger.copy(alpha = 0.1f))
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "벌금",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = Danger
+                                                    )
+                                                }
+                                            }
                                             if (memberData.isExcludeFood) {
                                                 Spacer(modifier = Modifier.width(8.dp))
                                                 Box(
@@ -584,13 +767,52 @@ private fun SettlementDetailScreen(
                                                     )
                                                 }
                                             }
+                                            if (memberData.isDiscounted) {
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(Success.copy(alpha = 0.1f))
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "감면",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = Success
+                                                    )
+                                                }
+                                            }
                                         }
                                         Text(
                                             text = formatAmount(memberAmount),
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = if (memberData.isExcludeFood) Warning else Gray500
+                                            color = if (memberData.hasPenalty) Danger else if (memberData.isDiscounted) Success else if (memberData.isExcludeFood) Warning else Gray500
                                         )
                                     }
+
+                                    // 금액 수정 버튼
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Gray200)
+                                            .clickable {
+                                                editingMember = memberData
+                                                editAmountText = memberAmount.toString()
+                                                showAmountEditDialog = true
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "금액 수정",
+                                            tint = Gray500,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    // 납부 상태 텍스트
                                     Text(
                                         text = if (memberData.isPaid) "완료" else "미납",
                                         style = MaterialTheme.typography.bodyMedium,

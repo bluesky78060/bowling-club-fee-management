@@ -27,16 +27,26 @@ interface PaymentDao {
 
     @Query("""
         SELECT * FROM payments
-        WHERE strftime('%Y-%m', datetime(payment_date * 86400, 'unixepoch')) = :yearMonth
-        ORDER BY payment_date DESC
+        WHERE meeting_date >= :startDate AND meeting_date <= :endDate
+        ORDER BY meeting_date DESC
     """)
-    fun getPaymentsByMonth(yearMonth: String): Flow<List<PaymentEntity>>
+    fun getPaymentsByMeetingDateRange(startDate: Long, endDate: Long): Flow<List<PaymentEntity>>
+
+    @Query("""
+        SELECT * FROM payments
+        WHERE meeting_date >= :startDate AND meeting_date <= :endDate
+        ORDER BY meeting_date DESC
+    """)
+    suspend fun getPaymentsByMeetingDateRangeOnce(startDate: Long, endDate: Long): List<PaymentEntity>
 
     @Query("SELECT * FROM payments WHERE id = :id")
     suspend fun getPaymentById(id: Long): PaymentEntity?
 
     @Query("SELECT SUM(amount) FROM payments WHERE payment_date >= :startDate AND payment_date <= :endDate")
     fun getTotalPaymentByDateRange(startDate: Long, endDate: Long): Flow<Int?>
+
+    @Query("SELECT SUM(amount) FROM payments WHERE meeting_date >= :startDate AND meeting_date <= :endDate")
+    fun getTotalPaymentByMeetingDateRange(startDate: Long, endDate: Long): Flow<Int?>
 
     @Query("""
         SELECT m.id FROM members m
@@ -47,6 +57,16 @@ interface PaymentDao {
         )
     """)
     fun getUnpaidMemberIds(startDate: Long, endDate: Long): Flow<List<Long>>
+
+    @Query("""
+        SELECT m.id FROM members m
+        WHERE m.status = 'active'
+        AND m.id NOT IN (
+            SELECT p.member_id FROM payments p
+            WHERE p.meeting_date >= :startDate AND p.meeting_date <= :endDate
+        )
+    """)
+    fun getUnpaidMemberIdsByMeetingDate(startDate: Long, endDate: Long): Flow<List<Long>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(payment: PaymentEntity): Long

@@ -3,8 +3,7 @@ package com.bowlingclub.fee.ui.screens.ocr
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bowlingclub.fee.data.ocr.ImagePreprocessor
-import com.bowlingclub.fee.data.ocr.OcrRepository
+import com.bowlingclub.fee.data.ocr.HybridOcrRepository
 import com.bowlingclub.fee.data.repository.MemberRepository
 import com.bowlingclub.fee.data.repository.ScoreRepository
 import com.bowlingclub.fee.domain.model.Member
@@ -44,8 +43,7 @@ data class MatchedPlayerScore(
 
 @HiltViewModel
 class OcrViewModel @Inject constructor(
-    private val ocrRepository: OcrRepository,
-    private val imagePreprocessor: ImagePreprocessor,
+    private val hybridOcrRepository: HybridOcrRepository,
     private val memberRepository: MemberRepository,
     private val scoreRepository: ScoreRepository
 ) : ViewModel() {
@@ -71,10 +69,7 @@ class OcrViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isProcessing = true, errorMessage = null) }
 
-            val result = ocrRepository.recognizeScoreSheetWithPreprocessing(
-                bitmap,
-                imagePreprocessor
-            )
+            val result = hybridOcrRepository.recognizeScoreSheet(bitmap)
 
             if (result.isSuccess) {
                 val ocrResult = result.getOrNull()
@@ -274,6 +269,6 @@ class OcrViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        ocrRepository.close()
+        hybridOcrRepository.close()
     }
 }

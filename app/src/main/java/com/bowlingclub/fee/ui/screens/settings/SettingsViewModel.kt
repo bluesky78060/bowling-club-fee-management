@@ -4,8 +4,10 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bowlingclub.fee.data.repository.BackupRepository
 import com.bowlingclub.fee.data.repository.SettingsRepository
 import com.bowlingclub.fee.domain.model.AppSettings
+import com.bowlingclub.fee.domain.model.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,13 +23,16 @@ data class SettingsUiState(
     val errorMessage: String? = null,
     val successMessage: String? = null,
     val showResetDialog: Boolean = false,
+    val showRestoreDialog: Boolean = false,
     val backupInProgress: Boolean = false,
-    val restoreInProgress: Boolean = false
+    val restoreInProgress: Boolean = false,
+    val databaseSize: String = ""
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val backupRepository: BackupRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -35,6 +40,7 @@ class SettingsViewModel @Inject constructor(
 
     init {
         loadSettings()
+        loadDatabaseSize()
     }
 
     private fun loadSettings() {
@@ -43,6 +49,11 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(settings = settings, isLoading = false) }
             }
         }
+    }
+
+    private fun loadDatabaseSize() {
+        val size = backupRepository.getFormattedDatabaseSize()
+        _uiState.update { it.copy(databaseSize = size) }
     }
 
     fun updateClubName(name: String) {
@@ -179,5 +190,59 @@ class SettingsViewModel @Inject constructor(
 
     fun clearSuccess() {
         _uiState.update { it.copy(successMessage = null) }
+    }
+
+    // 데이터베이스 백업 관련 메서드
+    fun generateBackupFileName(): String {
+        return backupRepository.generateBackupFileName()
+    }
+
+    fun exportDatabase(uri: Uri) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(backupInProgress = true) }
+            val result = backupRepository.exportDatabase(uri)
+            when (result) {
+                is Result.Success -> {
+                    _uiState.update { it.copy(successMessage = "데이터베이스가 백업되었습니다") }
+                }
+                is Result.Error -> {
+                    _uiState.update { it.copy(errorMessage = "백업 실패: ${result.exception.message}") }
+                }
+                is Result.Loading -> { /* ignore */ }
+            }
+            _uiState.update { it.copy(backupInProgress = false) }
+        }
+    }
+
+    fun showRestoreDialog() {
+        _uiState.update { it.copy(showRestoreDialog = true) }
+    }
+
+    fun hideRestoreDialog() {
+        _uiState.update { it.copy(showRestoreDialog = false) }
+    }
+
+    fun importDatabase(uri: Uri, onRestoreComplete: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(restoreInProgress = true) }
+            hideRestoreDialog()
+            val result = backupRepository.importDatabase(uri)
+            when (result) {
+                is Result.Success -> {
+                    _uiState.update { it.copy(successMessage = "데이터베이스가 복원되었습니다. 앱을 다시 시작합니다.") }
+                    // 앱 재시작 필요
+                    onRestoreComplete()
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = "복원 실패: ${result.exception.message}",
+                            restoreInProgress = false
+                        )
+                    }
+                }
+                is Result.Loading -> { /* ignore */ }
+            }
+        }
     }
 }

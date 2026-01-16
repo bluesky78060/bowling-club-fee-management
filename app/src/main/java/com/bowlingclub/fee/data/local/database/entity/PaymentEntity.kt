@@ -6,8 +6,10 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.bowlingclub.fee.domain.model.Payment
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 @Entity(
     tableName = "payments",
@@ -48,7 +50,7 @@ data class PaymentEntity(
         paymentDate = LocalDate.ofEpochDay(paymentDate),
         meetingDate = meetingDate?.let { LocalDate.ofEpochDay(it) },
         memo = memo,
-        createdAt = LocalDateTime.now()
+        createdAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(createdAt), ZoneId.systemDefault())
     )
 
     companion object {
@@ -59,7 +61,7 @@ data class PaymentEntity(
             paymentDate = payment.paymentDate.toEpochDay(),
             meetingDate = payment.meetingDate?.toEpochDay(),
             memo = payment.memo,
-            createdAt = System.currentTimeMillis()
+            createdAt = payment.createdAt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         )
     }
 }

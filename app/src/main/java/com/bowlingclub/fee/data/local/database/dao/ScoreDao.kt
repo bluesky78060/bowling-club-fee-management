@@ -109,6 +109,9 @@ interface ScoreDao {
     @Query("DELETE FROM scores WHERE meeting_id = :meetingId AND member_id = :memberId")
     suspend fun deleteByMeetingAndMember(meetingId: Long, memberId: Long)
 
+    @Query("DELETE FROM scores WHERE meeting_id = :meetingId")
+    suspend fun deleteByMeetingId(meetingId: Long)
+
     @Query("""
         SELECT s.member_id, m.name, AVG(s.score) as average
         FROM scores s
@@ -171,6 +174,20 @@ interface ScoreDao {
         LIMIT :limit
     """)
     suspend fun getTopHandicapRankings(limit: Int): List<MemberHandicapRanking>
+
+    /**
+     * 특정 모임의 회원별 점수 합계와 기본 에버리지 조회
+     * 벌금 계산용: 3게임 합계가 기본에버리지×3 미만인 경우 벌금 부과
+     */
+    @Query("""
+        SELECT s.member_id, m.name, COALESCE(m.initial_average, 0) as initial_average,
+               SUM(s.score) as total_score, COUNT(s.id) as game_count
+        FROM scores s
+        INNER JOIN members m ON s.member_id = m.id
+        WHERE s.meeting_id = :meetingId
+        GROUP BY s.member_id
+    """)
+    suspend fun getMemberScoreSummaryByMeeting(meetingId: Long): List<MemberMeetingScoreSummary>
 }
 
 data class MemberAverageRanking(
@@ -208,3 +225,24 @@ data class MemberHandicapRanking(
     val handicap_average: Double,
     val game_count: Int
 )
+
+/**
+ * 특정 모임에서의 회원별 점수 요약
+ * 벌금 계산용
+ */
+data class MemberMeetingScoreSummary(
+    val member_id: Long,
+    val name: String,
+    val initial_average: Int,
+    val total_score: Int,
+    val game_count: Int
+) {
+    /** 기준 점수 (기본에버리지 × 게임수) */
+    val targetScore: Int get() = initial_average * game_count
+
+    /** 벌금 대상 여부 (3게임 이상 치고, 합계가 기준 미만) */
+    val isPenaltyTarget: Boolean get() = game_count >= 3 && total_score < targetScore
+
+    /** 기준 대비 차이 */
+    val scoreDifference: Int get() = total_score - targetScore
+}

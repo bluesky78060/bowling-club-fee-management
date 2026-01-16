@@ -18,15 +18,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -52,6 +55,7 @@ import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemberListScreen(
     viewModel: MemberViewModel = hiltViewModel(),
@@ -63,14 +67,27 @@ fun MemberListScreen(
     var selectedFilter by remember { mutableStateOf<MemberStatus?>(MemberStatus.ACTIVE) }
 
     Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddMember,
-                containerColor = Primary,
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "회원 추가")
-            }
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "회원 관리",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                actions = {
+                    IconButton(onClick = onAddMember) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "회원 추가",
+                            tint = Primary
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = BackgroundSecondary
+                )
+            )
         },
         containerColor = BackgroundSecondary
     ) { paddingValues ->
@@ -78,16 +95,8 @@ fun MemberListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
         ) {
-            // Header
-            Text(
-                text = "회원 관리",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             // Search Bar
             OutlinedTextField(

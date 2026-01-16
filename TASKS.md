@@ -30,8 +30,8 @@ Phase 5: 테스트 및 배포
   - [x] Navigation Compose
   - [x] DataStore
   - [ ] Vico Chart
-  - [ ] ML Kit OCR
-  - [ ] CameraX
+  - [x] ML Kit OCR (Korean Text Recognition)
+  - [x] CameraX
 - [x] 프로젝트 구조 생성 (di, data, domain, ui 패키지)
 
 ### 1.2 데이터베이스 설정
@@ -105,12 +105,12 @@ Phase 5: 테스트 및 배포
 
 ### 2.1 회원 관리 ✅ (2026-01-12)
 - [x] MemberRepository 구현
-- [ ] 회원 관련 UseCase 구현
-  - [ ] GetAllMembersUseCase
-  - [ ] GetMemberByIdUseCase
-  - [ ] AddMemberUseCase
-  - [ ] UpdateMemberUseCase
-  - [ ] DeleteMemberUseCase
+- [x] 회원 관련 UseCase 구현
+  - [x] GetAllMembersUseCase
+  - [x] GetMemberByIdUseCase
+  - [x] AddMemberUseCase
+  - [x] UpdateMemberUseCase
+  - [x] DeleteMemberUseCase
 - [x] 회원 목록 화면 (MemberListScreen)
   - [x] 회원 카드 컴포넌트
   - [x] 상태별 필터 (활동/휴면/탈퇴)
@@ -138,12 +138,12 @@ Phase 5: 테스트 및 배포
 
 ### 2.2 회비 관리 ✅ (2026-01-12)
 - [x] PaymentRepository 구현
-- [ ] 회비 관련 UseCase 구현
-  - [ ] GetPaymentsByMonthUseCase
-  - [ ] GetPaymentsByMemberUseCase
-  - [ ] AddPaymentUseCase
-  - [ ] AddBulkPaymentsUseCase
-  - [ ] GetUnpaidMembersUseCase
+- [x] 회비 관련 UseCase 구현
+  - [x] GetPaymentsByMonthUseCase
+  - [x] GetPaymentsByMemberUseCase
+  - [x] AddPaymentUseCase
+  - [x] AddBulkPaymentsUseCase
+  - [x] GetUnpaidMembersUseCase
 - [x] PaymentViewModel 구현
   - [x] 월별 납부 조회
   - [x] 납부/미납 회원 분류
@@ -207,16 +207,16 @@ Phase 5: 테스트 및 배포
   - [x] AccountScreen → AccountFormScreen 라우팅
   - [x] 거래 수정 화면 라우팅 (LaunchedEffect)
 
-### 2.4 영수증 OCR 스캔
-- [ ] 카메라 권한 요청 구현
-- [ ] CameraX 프리뷰 화면 구현
-- [ ] ML Kit Text Recognition 연동
-- [ ] 영수증 파싱 로직 구현
-  - [ ] 금액 추출 (정규식)
-  - [ ] 날짜 추출 (정규식)
-  - [ ] 상호명 추출
-- [ ] 인식 결과 확인/수정 화면
-- [ ] 장부 자동 등록 연동
+### 2.4 영수증 OCR 스캔 ✅ (2026-01-14)
+- [x] 카메라 권한 요청 구현
+- [x] CameraX 프리뷰 화면 구현
+- [x] ML Kit Text Recognition 연동 (Korean Text Recognizer)
+- [x] 영수증 파싱 로직 구현 (ReceiptParser)
+  - [x] 금액 추출 (정규식 + "원" 컨텍스트)
+  - [x] 날짜 추출 (정규식 + 동적 연도 범위)
+  - [x] 상호명 추출 (패턴 매칭)
+- [x] 인식 결과 확인/수정 화면 (ReceiptResultScreen)
+- [x] 장부 자동 등록 연동 (AccountRepository)
 
 ### 2.5 홈 대시보드 ✅ (2026-01-12)
 - [x] 홈 화면 (HomeScreen) - 기본 UI
@@ -225,8 +225,8 @@ Phase 5: 테스트 및 배포
   - [x] 에버리지 TOP 3 (ScoreRepository 연동)
   - [x] 빠른 메뉴 버튼 네비게이션 연결 (납부 등록, 지출 등록)
   - [x] "전체보기" 링크 네비게이션 연결
-  - [ ] 모임 시작 기능 (추후)
-  - [ ] 정산 기능 (추후)
+  - [x] 모임 시작 기능
+  - [x] 정산 기능
 - [x] HomeViewModel 개선
   - [x] 이번 달 수입/지출 계산
   - [x] 랭킹 데이터 로드
@@ -243,13 +243,13 @@ Phase 5: 테스트 및 배포
   - [x] 랭킹 데이터 로드
   - [x] 모임 생성/삭제
   - [x] 점수 추가/수정/삭제
-- [ ] 점수 관련 UseCase 구현 (추후)
-  - [ ] GetAllMeetingsUseCase
-  - [ ] CreateMeetingUseCase
-  - [ ] GetScoresByMeetingUseCase
-  - [ ] AddScoreUseCase
-  - [ ] UpdateScoreUseCase
-  - [ ] CalculateAverageUseCase
+- [x] 점수 관련 UseCase 구현
+  - [x] GetAllMeetingsUseCase
+  - [x] CreateMeetingUseCase
+  - [x] GetScoresByMeetingUseCase
+  - [x] AddScoreUseCase
+  - [x] UpdateScoreUseCase
+  - [x] CalculateAverageUseCase
 - [x] ScoreScreen 개선 (실데이터 연동)
   - [x] 모임 기록 탭 (모임 목록)
   - [x] 랭킹 탭 (TOP 20 에버리지)
@@ -269,10 +269,10 @@ Phase 5: 테스트 및 배포
   - [x] ScoreScreen → ScoreInputScreen
 
 ### 3.2 통계 및 랭킹 ✅ (2026-01-13)
-- [ ] 통계 관련 UseCase 구현 (추후)
-  - [ ] GetMemberStatsUseCase
-  - [ ] GetRankingsUseCase
-  - [ ] GetMonthlyMVPUseCase
+- [x] 통계 관련 UseCase 구현
+  - [x] GetMemberStatsUseCase
+  - [x] GetRankingsUseCase
+  - [x] GetMonthlyMVPUseCase
 - [ ] 개인 통계 표시 (추후)
   - [ ] 에버리지 (최근 12게임)
   - [ ] 하이게임/로우게임
@@ -422,12 +422,12 @@ Phase 5: 테스트 및 배포
 
 | Phase | 항목 수 | 완료 | 진행률 |
 |-------|---------|------|--------|
-| Phase 1 | 25 | 25 | 100% |
-| Phase 2 | 48 | 48 | 100% |
+| Phase 1 | 27 | 27 | 100% |
+| Phase 2 | 56 | 56 | 100% |
 | Phase 3 | 28 | 24 | 86% |
 | Phase 4 | 25 | 25 | 100% |
 | Phase 5 | 20 | 17 | 85% |
-| **총계** | **146** | **139** | **95%** |
+| **총계** | **156** | **149** | **96%** |
 
 ---
 
@@ -470,3 +470,4 @@ Phase 5: 테스트 및 배포
 | 2.5 | 2026-01-13 | Claude | 심화 코드 리뷰 - P0/P1 이슈 수정: Entity 타임스탬프 변환, getMemberById 레이스컨디션, 병렬 쿼리 최적화, SQL Injection 방지, 입력 검증 추가 |
 | 2.6 | 2026-01-14 | Claude | 영수증 OCR 기능 완료 - ReceiptParser, ReceiptOcrRepository, ReceiptCameraScreen, ReceiptResultScreen, 카테고리 자동 추정, 장부 연동 |
 | 2.7 | 2026-01-14 | Claude | Phase 5.2 최적화 완료 - LazyColumn key/contentType, ProGuard/R8 활성화, APK 크기 27% 감소 (62MB→45MB) |
+| 2.8 | 2026-01-15 | Claude | Member/Payment UseCase 구현 완료 - 10개 UseCase 생성, 코드 리뷰 이슈 수정 (트랜잭션 처리, ID 검증, 전화번호 검증, Set 최적화) |

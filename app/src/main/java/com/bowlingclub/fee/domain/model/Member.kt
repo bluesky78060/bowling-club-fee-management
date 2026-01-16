@@ -12,6 +12,7 @@ data class Member(
     val initialAverage: Int = 150,
     val handicap: Int = 0,
     val status: MemberStatus = MemberStatus.ACTIVE,
+    val isDiscounted: Boolean = false, // 감면 대상자 여부 (65세 이상, 장애인 등)
     val memo: String = "",
     val createdAt: LocalDateTime = LocalDateTime.now(),
     val updatedAt: LocalDateTime = LocalDateTime.now()

@@ -6,6 +6,7 @@ import com.bowlingclub.fee.data.local.database.dao.MemberAverageRanking
 import com.bowlingclub.fee.data.local.database.dao.MemberGrowthRanking
 import com.bowlingclub.fee.data.local.database.dao.MemberHandicapRanking
 import com.bowlingclub.fee.data.local.database.dao.MemberHighGameRanking
+import com.bowlingclub.fee.data.local.database.dao.MemberMeetingScoreSummary
 import com.bowlingclub.fee.data.local.database.dao.MemberMonthlyMVP
 import com.bowlingclub.fee.data.local.database.dao.ScoreDao
 import com.bowlingclub.fee.data.local.database.entity.MeetingEntity
@@ -133,6 +134,9 @@ class ScoreRepository @Inject constructor(
     suspend fun deleteScoresByMeetingAndMember(meetingId: Long, memberId: Long): Result<Unit> =
         Result.runCatching { scoreDao.deleteByMeetingAndMember(meetingId, memberId) }
 
+    suspend fun deleteScoresByMeetingId(meetingId: Long): Result<Unit> =
+        Result.runCatching { scoreDao.deleteByMeetingId(meetingId) }
+
     suspend fun getTopAverageRankings(limit: Int = 3): Result<List<MemberAverageRanking>> =
         Result.runCatching { scoreDao.getTopAverageRankings(limit) }
 
@@ -147,4 +151,11 @@ class ScoreRepository @Inject constructor(
 
     suspend fun getTopHandicapRankings(limit: Int = 20): Result<List<MemberHandicapRanking>> =
         Result.runCatching { scoreDao.getTopHandicapRankings(limit) }
+
+    /**
+     * 특정 모임의 회원별 점수 요약 조회 (벌금 계산용)
+     * 3게임 합계가 기본에버리지×3 미만인 회원은 벌금 대상
+     */
+    suspend fun getMemberScoreSummaryByMeeting(meetingId: Long): Result<List<MemberMeetingScoreSummary>> =
+        Result.runCatching { scoreDao.getMemberScoreSummaryByMeeting(meetingId) }
 }

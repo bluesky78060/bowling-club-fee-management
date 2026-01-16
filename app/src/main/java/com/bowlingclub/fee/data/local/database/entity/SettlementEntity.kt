@@ -40,6 +40,9 @@ data class SettlementEntity(
     @ColumnInfo(name = "other_fee")
     val otherFee: Int = 0,
 
+    @ColumnInfo(name = "penalty_fee", defaultValue = "0")
+    val penaltyFee: Int = 0,
+
     @ColumnInfo(name = "total_amount")
     val totalAmount: Int,
 
@@ -59,6 +62,7 @@ data class SettlementEntity(
         gameFee = gameFee,
         foodFee = foodFee,
         otherFee = otherFee,
+        penaltyFee = penaltyFee,
         totalAmount = totalAmount,
         perPerson = perPerson,
         status = SettlementStatus.fromDbValue(status),
@@ -76,6 +80,7 @@ data class SettlementEntity(
             gameFee = settlement.gameFee,
             foodFee = settlement.foodFee,
             otherFee = settlement.otherFee,
+            penaltyFee = settlement.penaltyFee,
             totalAmount = settlement.totalAmount,
             perPerson = settlement.perPerson,
             status = settlement.status.dbValue,
@@ -121,6 +126,12 @@ data class SettlementMemberEntity(
     @ColumnInfo(name = "exclude_food", defaultValue = "0")
     val excludeFood: Boolean = false,
 
+    @ColumnInfo(name = "has_penalty", defaultValue = "0")
+    val hasPenalty: Boolean = false,
+
+    @ColumnInfo(name = "is_discounted", defaultValue = "0")
+    val isDiscounted: Boolean = false,
+
     @ColumnInfo(name = "is_paid")
     val isPaid: Boolean = false,
 
@@ -133,6 +144,8 @@ data class SettlementMemberEntity(
         memberId = memberId,
         amount = amount,
         excludeFood = excludeFood,
+        hasPenalty = hasPenalty,
+        isDiscounted = isDiscounted,
         isPaid = isPaid,
         paidAt = paidAt?.let {
             LocalDateTime.ofInstant(
@@ -149,8 +162,10 @@ data class SettlementMemberEntity(
             memberId = sm.memberId,
             amount = sm.amount,
             excludeFood = sm.excludeFood,
+            hasPenalty = sm.hasPenalty,
+            isDiscounted = sm.isDiscounted,
             isPaid = sm.isPaid,
-            paidAt = sm.paidAt?.let { System.currentTimeMillis() }
+            paidAt = sm.paidAt?.atZone(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
         )
     }
 }

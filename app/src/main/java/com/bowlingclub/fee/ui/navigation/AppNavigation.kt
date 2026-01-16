@@ -6,12 +6,12 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.SportsBaseball
+import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.Book
-import androidx.compose.material.icons.outlined.SportsBaseball
+import androidx.compose.material.icons.outlined.Leaderboard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -66,6 +66,7 @@ import com.bowlingclub.fee.ui.screens.settings.SettingsScreen
 import com.bowlingclub.fee.ui.screens.settings.SettingsViewModel
 import com.bowlingclub.fee.ui.screens.ocr.OcrScreen
 import com.bowlingclub.fee.ui.screens.receipt.ReceiptOcrScreen
+import com.bowlingclub.fee.domain.model.SettlementConfig
 import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
@@ -107,8 +108,8 @@ sealed class BottomNavItem(
     data object Score : BottomNavItem(
         route = "score",
         title = "점수",
-        selectedIcon = Icons.Filled.SportsBaseball,
-        unselectedIcon = Icons.Outlined.SportsBaseball
+        selectedIcon = Icons.Filled.Leaderboard,
+        unselectedIcon = Icons.Outlined.Leaderboard
     )
 }
 
@@ -282,6 +283,8 @@ fun AppNavigation() {
                 if (member != null) {
                     MemberDetailScreen(
                         member = member,
+                        totalGames = uiState.selectedMemberTotalGames,
+                        stats = uiState.selectedMemberStats,
                         onEdit = { navController.navigate(Screen.memberEdit(memberId)) },
                         onDelete = {
                             viewModel.deleteMember(member)
@@ -392,6 +395,10 @@ fun AppNavigation() {
                             viewModel.updateAccount(updatedAccount)
                             navController.popBackStack()
                         },
+                        onDelete = { accountToDelete ->
+                            viewModel.deleteAccount(accountToDelete)
+                            navController.popBackStack()
+                        },
                         onBack = { navController.popBackStack() }
                     )
                 }
@@ -439,7 +446,11 @@ fun AppNavigation() {
                         meeting = meeting,
                         onSave = { navController.popBackStack() },
                         onBack = { navController.popBackStack() },
-                        onOcrScan = { navController.navigate(Screen.ocrScan(meetingId)) }
+                        onOcrScan = { navController.navigate(Screen.ocrScan(meetingId)) },
+                        onDelete = { meetingToDelete ->
+                            viewModel.deleteMeeting(meetingToDelete)
+                            navController.popBackStack()
+                        }
                     )
                 }
             }
@@ -460,17 +471,64 @@ fun AppNavigation() {
                 val uiState by viewModel.uiState.collectAsState()
                 val memberUiState by memberViewModel.uiState.collectAsState()
 
-                SettlementFormScreen(
-                    meetings = uiState.recentMeetings,
-                    members = memberUiState.members.filter {
-                        it.status == com.bowlingclub.fee.domain.model.MemberStatus.ACTIVE
-                    },
-                    onSave = { meetingId, gameFee, foodFee, otherFee, memo, memberIds, excludeFoodMemberIds ->
-                        viewModel.createSettlement(meetingId, gameFee, foodFee, otherFee, memo, memberIds, excludeFoodMemberIds)
-                        navController.popBackStack()
-                    },
-                    onBack = { navController.popBackStack() }
-                )
+                // 영수증 OCR 카메라 화면 표시
+                if (uiState.showOcrCamera) {
+                    com.bowlingclub.fee.ui.screens.receipt.ReceiptCameraScreen(
+                        isProcessing = uiState.isOcrProcessing,
+                        onImageCaptured = { bitmap ->
+                            viewModel.processReceiptImage(bitmap)
+                        },
+                        onNavigateBack = {
+                            viewModel.hideOcrCamera()
+                        }
+                    )
+                } else {
+                    SettlementFormScreen(
+                        meetings = uiState.recentMeetings,
+                        members = memberUiState.members.filter {
+                            it.status == com.bowlingclub.fee.domain.model.MemberStatus.ACTIVE
+                        },
+                        ocrResults = uiState.ocrResults,
+                        pendingOcrResult = uiState.pendingOcrResult,
+                        // 폼 상태 (ViewModel에서 관리)
+                        selectedMeetingId = uiState.formSelectedMeetingId,
+                        gameFee = uiState.formGameFee,
+                        foodFee = uiState.formFoodFee,
+                        otherFee = uiState.formOtherFee,
+                        memo = uiState.formMemo,
+                        selectedMemberIds = uiState.formSelectedMemberIds,
+                        excludeFoodMemberIds = uiState.formExcludeFoodMemberIds,
+                        // 벌금 관련 상태
+                        penaltyMembers = uiState.formPenaltyMembers,
+                        penaltyMemberIds = uiState.formPenaltyMemberIds,
+                        penaltyAmount = SettlementConfig.PENALTY_AMOUNT,
+                        // 감면 대상자 관련 상태
+                        discountedMemberIds = uiState.formDiscountedMemberIds,
+                        // 콜백 함수들
+                        onMeetingIdChange = { viewModel.updateFormMeetingId(it) },
+                        onGameFeeChange = { viewModel.updateFormGameFee(it) },
+                        onFoodFeeChange = { viewModel.updateFormFoodFee(it) },
+                        onOtherFeeChange = { viewModel.updateFormOtherFee(it) },
+                        onMemoChange = { viewModel.updateFormMemo(it) },
+                        onSelectedMemberIdsChange = { viewModel.updateFormSelectedMemberIds(it) },
+                        onExcludeFoodMemberIdsChange = { viewModel.updateFormExcludeFoodMemberIds(it) },
+                        onPenaltyMemberIdsChange = { viewModel.updateFormPenaltyMemberIds(it) },
+                        onDiscountedMemberIdsChange = { viewModel.updateFormDiscountedMemberIds(it) },
+                        onSave = { meetingId, gameFee, foodFee, otherFee, memo, memberIds, excludeFoodMemberIds, penaltyMemberIds, discountedMemberIds ->
+                            viewModel.createSettlement(meetingId, gameFee, foodFee, otherFee, memo, memberIds, excludeFoodMemberIds, penaltyMemberIds, discountedMemberIds)
+                            viewModel.clearFormState()
+                            navController.popBackStack()
+                        },
+                        onBack = {
+                            viewModel.clearFormState()
+                            navController.popBackStack()
+                        },
+                        onOcrClick = { viewModel.showOcrCamera() },
+                        onAddOcrResult = { viewModel.addOcrResult(it) },
+                        onClearPendingOcrResult = { viewModel.clearPendingOcrResult() },
+                        onClearAllOcrResults = { viewModel.clearAllOcrResults() }
+                    )
+                }
             }
 
             // Donation screens

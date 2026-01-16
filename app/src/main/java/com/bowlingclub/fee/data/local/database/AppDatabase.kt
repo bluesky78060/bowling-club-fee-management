@@ -40,7 +40,7 @@ import com.bowlingclub.fee.data.local.database.entity.TeamMemberEntity
         TeamMatchEntity::class,
         TeamMatchScoreEntity::class
     ],
-    version = 5,
+    version = 7,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -160,6 +160,24 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_team_match_scores_team_id` ON `team_match_scores` (`team_id`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_team_match_scores_member_id` ON `team_match_scores` (`member_id`)")
                 db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_team_match_scores_team_match_id_team_id_member_id_game_number` ON `team_match_scores` (`team_match_id`, `team_id`, `member_id`, `game_number`)")
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add penalty_fee column to settlements table
+                db.execSQL("ALTER TABLE `settlements` ADD COLUMN `penalty_fee` INTEGER NOT NULL DEFAULT 0")
+                // Add has_penalty column to settlement_members table
+                db.execSQL("ALTER TABLE `settlement_members` ADD COLUMN `has_penalty` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add is_discounted column to members table (감면 대상자 여부)
+                db.execSQL("ALTER TABLE `members` ADD COLUMN `is_discounted` INTEGER NOT NULL DEFAULT 0")
+                // Add is_discounted column to settlement_members table
+                db.execSQL("ALTER TABLE `settlement_members` ADD COLUMN `is_discounted` INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

@@ -3,8 +3,12 @@ package com.bowlingclub.fee.ui.screens.receipt
 import android.Manifest
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.net.Uri
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraControl
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
@@ -33,6 +37,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -74,6 +79,22 @@ fun ReceiptCameraScreen(
 
     var hasCameraPermission by remember { mutableStateOf(false) }
 
+    // 갤러리에서 이미지 선택 런처
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                context.contentResolver.openInputStream(it)?.use { inputStream ->
+                    val bitmap = BitmapFactory.decodeStream(inputStream)
+                    bitmap?.let { bmp -> onImageCaptured(bmp) }
+                }
+            } catch (e: Exception) {
+                Log.e("ReceiptCamera", "갤러리 이미지 로드 실패", e)
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         hasCameraPermission = ContextCompat.checkSelfPermission(
             context,
@@ -84,7 +105,8 @@ fun ReceiptCameraScreen(
     if (!hasCameraPermission) {
         CameraPermissionRequest(
             onPermissionGranted = { hasCameraPermission = true },
-            onNavigateBack = onNavigateBack
+            onNavigateBack = onNavigateBack,
+            onGalleryClick = { galleryLauncher.launch("image/*") }
         )
     } else {
         ReceiptCameraPreviewContent(
@@ -92,7 +114,8 @@ fun ReceiptCameraScreen(
             lifecycleOwner = lifecycleOwner,
             isProcessing = isProcessing,
             onImageCaptured = onImageCaptured,
-            onNavigateBack = onNavigateBack
+            onNavigateBack = onNavigateBack,
+            onGalleryClick = { galleryLauncher.launch("image/*") }
         )
     }
 }
@@ -100,7 +123,8 @@ fun ReceiptCameraScreen(
 @Composable
 private fun CameraPermissionRequest(
     onPermissionGranted: () -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onGalleryClick: () -> Unit
 ) {
     val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
@@ -139,7 +163,7 @@ private fun CameraPermissionRequest(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "영수증을 스캔하려면 카메라 접근 권한을 허용해주세요.",
+            text = "영수증을 스캔하려면 카메라 접근 권한을 허용해주세요.\n또는 갤러리에서 사진을 선택할 수 있습니다.",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -158,6 +182,19 @@ private fun CameraPermissionRequest(
             }
 
             Button(
+                onClick = onGalleryClick,
+                colors = ButtonDefaults.filledTonalButtonColors()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PhotoLibrary,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("갤러리")
+            }
+
+            Button(
                 onClick = { launcher.launch(Manifest.permission.CAMERA) }
             ) {
                 Text("권한 허용")
@@ -172,7 +209,8 @@ private fun ReceiptCameraPreviewContent(
     lifecycleOwner: LifecycleOwner,
     isProcessing: Boolean,
     onImageCaptured: (Bitmap) -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onGalleryClick: () -> Unit
 ) {
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     var cameraControl by remember { mutableStateOf<CameraControl?>(null) }
@@ -291,48 +329,41 @@ private fun ReceiptCameraPreviewContent(
                 }
             }
 
-            // Guide Frame Area
+            // Guide Frame Area - 전체 화면
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(12.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                // 세로 방향 영수증 가이드
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.85f)
-                        .height(400.dp)
-                        .border(
-                            width = 2.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(12.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (!isProcessing) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Receipt,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = Color.White.copy(alpha = 0.7f)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "영수증을 프레임 안에 맞춰주세요",
-                                color = Color.White,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "금액이 잘 보이도록 촬영해주세요",
-                                color = Color.White.copy(alpha = 0.7f),
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
+                if (!isProcessing) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Receipt,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = Color.White.copy(alpha = 0.7f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "영수증을 화면에 맞춰주세요",
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "금액이 잘 보이도록 촬영해주세요",
+                            color = Color.White.copy(alpha = 0.7f),
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             }
@@ -360,39 +391,87 @@ private fun ReceiptCameraPreviewContent(
                             style = MaterialTheme.typography.bodyMedium
                         )
                     } else {
-                        Button(
-                            onClick = {
-                                imageCapture?.let { capture ->
-                                    capture.flashMode = if (isFlashOn) {
-                                        ImageCapture.FLASH_MODE_ON
-                                    } else {
-                                        ImageCapture.FLASH_MODE_OFF
-                                    }
-
-                                    captureImage(
-                                        imageCapture = capture,
-                                        executor = cameraExecutor,
-                                        onImageCaptured = onImageCaptured
+                        // 버튼 영역 (갤러리 + 촬영)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // 갤러리 버튼
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Button(
+                                    onClick = onGalleryClick,
+                                    modifier = Modifier.size(56.dp),
+                                    shape = CircleShape,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.White.copy(alpha = 0.2f)
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PhotoLibrary,
+                                        contentDescription = "갤러리",
+                                        modifier = Modifier.size(24.dp),
+                                        tint = Color.White
                                     )
                                 }
-                            },
-                            modifier = Modifier.size(72.dp),
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CameraAlt,
-                                contentDescription = "촬영",
-                                modifier = Modifier.size(32.dp)
-                            )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "갤러리",
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+
+                            // 촬영 버튼
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Button(
+                                    onClick = {
+                                        imageCapture?.let { capture ->
+                                            capture.flashMode = if (isFlashOn) {
+                                                ImageCapture.FLASH_MODE_ON
+                                            } else {
+                                                ImageCapture.FLASH_MODE_OFF
+                                            }
+
+                                            captureImage(
+                                                imageCapture = capture,
+                                                executor = cameraExecutor,
+                                                onImageCaptured = onImageCaptured
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier.size(72.dp),
+                                    shape = CircleShape,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CameraAlt,
+                                        contentDescription = "촬영",
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "촬영",
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+
+                            // 균형을 위한 빈 공간
+                            Spacer(modifier = Modifier.size(56.dp))
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = "촬영 버튼을 눌러 영수증을 스캔하세요",
+                            text = "촬영하거나 갤러리에서 영수증을 선택하세요",
                             color = Color.White.copy(alpha = 0.7f),
                             style = MaterialTheme.typography.bodySmall
                         )

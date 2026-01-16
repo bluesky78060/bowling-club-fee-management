@@ -1,9 +1,19 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
     id("org.jetbrains.kotlin.plugin.compose")
+}
+
+// local.properties에서 API 키 로드
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        load(localPropertiesFile.inputStream())
+    }
 }
 
 android {
@@ -21,6 +31,10 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Gemini API Key (local.properties에서 읽어옴)
+        val geminiApiKey = localProperties.getProperty("GEMINI_API_KEY") ?: ""
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
     }
 
     buildTypes {
@@ -85,6 +99,9 @@ dependencies {
 
     // ML Kit Text Recognition (OCR)
     implementation("com.google.mlkit:text-recognition-korean:16.0.1")
+
+    // Gemini AI (OCR 향상용)
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 
     // CameraX
     val cameraxVersion = "1.4.1"

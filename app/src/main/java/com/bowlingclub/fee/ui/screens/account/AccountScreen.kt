@@ -20,15 +20,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -55,6 +57,7 @@ import com.bowlingclub.fee.ui.theme.Success
 import com.bowlingclub.fee.ui.theme.SuccessLight
 import java.time.format.DateTimeFormatter
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(
     viewModel: AccountViewModel = hiltViewModel(),
@@ -66,28 +69,34 @@ fun AccountScreen(
     val dateFormatter = DateTimeFormatter.ofPattern("M/d")
 
     Scaffold(
-        floatingActionButton = {
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // 영수증 스캔 버튼
-                SmallFloatingActionButton(
-                    onClick = onReceiptScan,
-                    containerColor = Success,
-                    contentColor = Color.White
-                ) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = "영수증 스캔")
-                }
-                // 수동 추가 버튼
-                FloatingActionButton(
-                    onClick = onAddAccount,
-                    containerColor = Primary,
-                    contentColor = Color.White
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "거래 추가")
-                }
-            }
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "장부 관리",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                actions = {
+                    IconButton(onClick = onReceiptScan) {
+                        Icon(
+                            Icons.Default.CameraAlt,
+                            contentDescription = "영수증 스캔",
+                            tint = Primary
+                        )
+                    }
+                    IconButton(onClick = onAddAccount) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "거래 추가",
+                            tint = Primary
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = BackgroundSecondary
+                )
+            )
         },
         containerColor = BackgroundSecondary
     ) { paddingValues ->
@@ -95,16 +104,9 @@ fun AccountScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
         ) {
-            // Header
-            Text(
-                text = "수입/지출 장부",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Balance Card
             BalanceSummaryCard(

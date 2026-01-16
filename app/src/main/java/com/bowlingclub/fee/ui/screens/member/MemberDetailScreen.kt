@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.bowlingclub.fee.domain.model.Gender
 import com.bowlingclub.fee.domain.model.Member
 import com.bowlingclub.fee.domain.model.MemberStatus
+import com.bowlingclub.fee.domain.model.Score
 import com.bowlingclub.fee.ui.components.BadgeType
 import com.bowlingclub.fee.ui.components.StatusBadge
 import com.bowlingclub.fee.ui.theme.AvatarFemale
@@ -66,6 +67,8 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun MemberDetailScreen(
     member: Member,
+    totalGames: Int = 0,
+    stats: MemberScoreStats = MemberScoreStats(),
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onBack: () -> Unit
@@ -174,7 +177,7 @@ fun MemberDetailScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Stats Cards
+            // Stats Cards - Row 1: 에버리지, 총 게임
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -184,20 +187,37 @@ fun MemberDetailScreen(
                 StatCard(
                     modifier = Modifier.weight(1f),
                     title = "에버리지",
-                    value = "${member.initialAverage}",
+                    value = stats.average?.let { String.format("%.1f", it) } ?: "-",
                     color = Primary
                 )
                 StatCard(
                     modifier = Modifier.weight(1f),
-                    title = "핸디캡",
-                    value = "${member.handicap}",
+                    title = "총 게임",
+                    value = "$totalGames",
+                    color = Warning
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Stats Cards - Row 2: 하이게임, 로우게임
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                StatCard(
+                    modifier = Modifier.weight(1f),
+                    title = "하이게임",
+                    value = stats.highGame?.toString() ?: "-",
                     color = Success
                 )
                 StatCard(
                     modifier = Modifier.weight(1f),
-                    title = "총 게임",
-                    value = "0",  // TODO: Calculate from scores
-                    color = Warning
+                    title = "로우게임",
+                    value = stats.lowGame?.toString() ?: "-",
+                    color = Danger
                 )
             }
 
@@ -244,7 +264,7 @@ fun MemberDetailScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Recent Scores Section (Placeholder)
+            // Recent Scores Section
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -262,17 +282,37 @@ fun MemberDetailScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "아직 기록된 점수가 없습니다",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Gray400
-                        )
+                    if (stats.recentScores.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "아직 기록된 점수가 없습니다",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Gray400
+                            )
+                        }
+                    } else {
+                        // 최근 점수를 게임 순서대로 표시 (최대 12개)
+                        val scores = stats.recentScores.take(12)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            scores.chunked(4).forEach { chunk ->
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    chunk.forEach { score ->
+                                        ScoreChip(score = score.score)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -359,6 +399,38 @@ private fun InfoRow(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun ScoreChip(score: Int) {
+    val backgroundColor = when {
+        score >= 200 -> Success.copy(alpha = 0.15f)
+        score >= 180 -> Primary.copy(alpha = 0.15f)
+        score < 150 -> Danger.copy(alpha = 0.15f)
+        else -> Gray400.copy(alpha = 0.15f)
+    }
+    val textColor = when {
+        score >= 200 -> Success
+        score >= 180 -> Primary
+        score < 150 -> Danger
+        else -> Gray500
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(backgroundColor)
+            .padding(vertical = 8.dp, horizontal = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "$score",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = textColor
         )
     }
 }
