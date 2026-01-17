@@ -241,18 +241,22 @@ data class MemberHandicapRanking(
  * 벌금 계산용
  */
 data class MemberMeetingScoreSummary(
-    val member_id: Long,
+    @androidx.room.ColumnInfo(name = "member_id")
+    val memberId: Long,
     val name: String,
-    val initial_average: Int,
-    val total_score: Int,
-    val game_count: Int
+    @androidx.room.ColumnInfo(name = "initial_average")
+    val initialAverage: Int,
+    @androidx.room.ColumnInfo(name = "total_score")
+    val totalScore: Int,
+    @androidx.room.ColumnInfo(name = "game_count")
+    val gameCount: Int
 ) {
     /** 기준 점수 (기본에버리지 × 게임수) */
-    val targetScore: Int get() = initial_average * game_count
+    val targetScore: Int get() = initialAverage * gameCount
 
     /** 벌금 대상 여부 (3게임 이상 치고, 합계가 기준 미만) */
-    val isPenaltyTarget: Boolean get() = game_count >= 3 && total_score < targetScore
+    val isPenaltyTarget: Boolean get() = gameCount >= 3 && totalScore < targetScore
 
     /** 기준 대비 차이 */
-    val scoreDifference: Int get() = total_score - targetScore
+    val scoreDifference: Int get() = totalScore - targetScore
 }

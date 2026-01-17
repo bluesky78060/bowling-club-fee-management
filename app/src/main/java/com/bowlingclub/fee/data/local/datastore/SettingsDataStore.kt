@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.bowlingclub.fee.domain.Constants
 import com.bowlingclub.fee.domain.model.AppSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -32,11 +33,11 @@ class SettingsDataStore @Inject constructor(
     val settings: Flow<AppSettings> = dataStore.data.map { preferences ->
         AppSettings(
             clubName = preferences[Keys.CLUB_NAME] ?: "볼링 동호회",
-            defaultFeeAmount = preferences[Keys.DEFAULT_FEE_AMOUNT] ?: 10000,
+            defaultFeeAmount = preferences[Keys.DEFAULT_FEE_AMOUNT] ?: Constants.DEFAULT_FEE_AMOUNT,
             averageGameCount = preferences[Keys.AVERAGE_GAME_COUNT] ?: 12,
             handicapUpperLimit = preferences[Keys.HANDICAP_UPPER_LIMIT] ?: 50,
             enableAutoBackup = preferences[Keys.ENABLE_AUTO_BACKUP] ?: false,
-            gameFeePerGame = preferences[Keys.GAME_FEE_PER_GAME] ?: 3000
+            gameFeePerGame = preferences[Keys.GAME_FEE_PER_GAME] ?: Constants.GAME_FEE_PER_GAME
         )
     }
 

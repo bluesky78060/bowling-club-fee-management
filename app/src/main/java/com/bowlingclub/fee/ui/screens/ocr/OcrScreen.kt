@@ -2,17 +2,22 @@ package com.bowlingclub.fee.ui.screens.ocr
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bowlingclub.fee.ui.components.AnimatedSnackbarHost
+import com.bowlingclub.fee.ui.components.SnackbarType
+import kotlinx.coroutines.delay
 
 /**
  * OCR 점수표 스캔 메인 화면
@@ -26,28 +31,33 @@ fun OcrScreen(
     viewModel: OcrViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+    var snackbarMessage by remember { mutableStateOf<String?>(null) }
+    var snackbarType by remember { mutableStateOf(SnackbarType.INFO) }
 
     // Error handling
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
+            snackbarMessage = message
+            snackbarType = SnackbarType.ERROR
             viewModel.clearError()
+            delay(3000)
+            snackbarMessage = null
         }
     }
 
     // Success handling
     LaunchedEffect(uiState.successMessage) {
         uiState.successMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
+            snackbarMessage = message
+            snackbarType = SnackbarType.SUCCESS
             viewModel.clearSuccess()
+            delay(2000)
+            snackbarMessage = null
             onSaveSuccess()
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { padding ->
+    Scaffold { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -81,6 +91,16 @@ fun OcrScreen(
                     onNavigateBack = onNavigateBack
                 )
             }
+
+            // 커스텀 스낵바
+            AnimatedSnackbarHost(
+                message = snackbarMessage,
+                type = snackbarType,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth(),
+                onDismiss = { snackbarMessage = null }
+            )
         }
     }
 }

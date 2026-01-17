@@ -1,28 +1,43 @@
 package com.bowlingclub.fee.ui.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Payments
-import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.Leaderboard
+import androidx.compose.material.icons.twotone.Home
+import androidx.compose.material.icons.twotone.People
+import androidx.compose.material.icons.twotone.Payments
+import androidx.compose.material.icons.twotone.Book
+import androidx.compose.material.icons.twotone.Leaderboard
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Leaderboard
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -80,35 +95,35 @@ sealed class BottomNavItem(
     data object Home : BottomNavItem(
         route = "home",
         title = "홈",
-        selectedIcon = Icons.Filled.Home,
+        selectedIcon = Icons.TwoTone.Home,
         unselectedIcon = Icons.Outlined.Home
     )
 
     data object Member : BottomNavItem(
         route = "member",
         title = "회원",
-        selectedIcon = Icons.Filled.People,
+        selectedIcon = Icons.TwoTone.People,
         unselectedIcon = Icons.Outlined.People
     )
 
     data object Payment : BottomNavItem(
         route = "payment",
         title = "회비",
-        selectedIcon = Icons.Filled.Payments,
+        selectedIcon = Icons.TwoTone.Payments,
         unselectedIcon = Icons.Outlined.Payments
     )
 
     data object Account : BottomNavItem(
         route = "account",
         title = "장부",
-        selectedIcon = Icons.Filled.Book,
+        selectedIcon = Icons.TwoTone.Book,
         unselectedIcon = Icons.Outlined.Book
     )
 
     data object Score : BottomNavItem(
         route = "score",
         title = "점수",
-        selectedIcon = Icons.Filled.Leaderboard,
+        selectedIcon = Icons.TwoTone.Leaderboard,
         unselectedIcon = Icons.Outlined.Leaderboard
     )
 }
@@ -165,13 +180,13 @@ fun AppNavigation() {
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
-                    containerColor = Color.White,
+                    containerColor = MaterialTheme.colorScheme.surface,
                     tonalElevation = 0.dp
                 ) {
                     bottomNavItems.forEach { item ->
                         val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
 
-                        NavigationBarItem(
+                        AnimatedNavigationBarItem(
                             selected = selected,
                             onClick = {
                                 navController.navigate(item.route) {
@@ -182,25 +197,8 @@ fun AppNavigation() {
                                     restoreState = true
                                 }
                             },
-                            icon = {
-                                Icon(
-                                    imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                                    contentDescription = item.title
-                                )
-                            },
-                            label = {
-                                Text(
-                                    text = item.title,
-                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-                                )
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Primary,
-                                selectedTextColor = Primary,
-                                unselectedIconColor = Gray400,
-                                unselectedTextColor = Gray500,
-                                indicatorColor = Color.Transparent
-                            )
+                            icon = if (selected) item.selectedIcon else item.unselectedIcon,
+                            label = item.title
                         )
                     }
                 }
@@ -210,9 +208,41 @@ fun AppNavigation() {
         NavHost(
             navController = navController,
             startDestination = BottomNavItem.Home.route,
-            modifier = Modifier.padding(paddingValues)
+            modifier = Modifier.padding(paddingValues),
+            // 기본 화면 전환 애니메이션 설정
+            enterTransition = {
+                fadeIn(animationSpec = tween(300)) + slideInHorizontally(
+                    initialOffsetX = { fullWidth -> fullWidth },
+                    animationSpec = tween(300)
+                )
+            },
+            exitTransition = {
+                fadeOut(animationSpec = tween(300)) + slideOutHorizontally(
+                    targetOffsetX = { fullWidth -> -fullWidth / 3 },
+                    animationSpec = tween(300)
+                )
+            },
+            popEnterTransition = {
+                fadeIn(animationSpec = tween(300)) + slideInHorizontally(
+                    initialOffsetX = { fullWidth -> -fullWidth / 3 },
+                    animationSpec = tween(300)
+                )
+            },
+            popExitTransition = {
+                fadeOut(animationSpec = tween(300)) + slideOutHorizontally(
+                    targetOffsetX = { fullWidth -> fullWidth },
+                    animationSpec = tween(300)
+                )
+            }
         ) {
-            composable(BottomNavItem.Home.route) {
+            // 하단 네비게이션 탭 - 페이드 전환
+            composable(
+                route = BottomNavItem.Home.route,
+                enterTransition = { fadeIn(animationSpec = tween(300)) },
+                exitTransition = { fadeOut(animationSpec = tween(300)) },
+                popEnterTransition = { fadeIn(animationSpec = tween(300)) },
+                popExitTransition = { fadeOut(animationSpec = tween(300)) }
+            ) {
                 HomeScreen(
                     onNavigateToPayment = { navController.navigate(Screen.PAYMENT_ADD) },
                     onNavigateToAccountAdd = { navController.navigate(Screen.ACCOUNT_ADD) },
@@ -241,12 +271,19 @@ fun AppNavigation() {
                 )
             }
 
-            composable(BottomNavItem.Member.route) {
+            composable(
+                route = BottomNavItem.Member.route,
+                enterTransition = { fadeIn(animationSpec = tween(300)) },
+                exitTransition = { fadeOut(animationSpec = tween(300)) },
+                popEnterTransition = { fadeIn(animationSpec = tween(300)) },
+                popExitTransition = { fadeOut(animationSpec = tween(300)) }
+            ) {
                 val viewModel: MemberViewModel = hiltViewModel()
                 MemberListScreen(
                     viewModel = viewModel,
                     onAddMember = { navController.navigate(Screen.MEMBER_ADD) },
-                    onMemberClick = { memberId -> navController.navigate(Screen.memberDetail(memberId)) }
+                    onMemberClick = { memberId -> navController.navigate(Screen.memberDetail(memberId)) },
+                    onEditMember = { memberId -> navController.navigate(Screen.memberEdit(memberId)) }
                 )
             }
 
@@ -323,7 +360,13 @@ fun AppNavigation() {
                 }
             }
 
-            composable(BottomNavItem.Payment.route) {
+            composable(
+                route = BottomNavItem.Payment.route,
+                enterTransition = { fadeIn(animationSpec = tween(300)) },
+                exitTransition = { fadeOut(animationSpec = tween(300)) },
+                popEnterTransition = { fadeIn(animationSpec = tween(300)) },
+                popExitTransition = { fadeOut(animationSpec = tween(300)) }
+            ) {
                 val viewModel: PaymentViewModel = hiltViewModel()
                 PaymentScreen(
                     viewModel = viewModel,
@@ -348,7 +391,13 @@ fun AppNavigation() {
                 )
             }
 
-            composable(BottomNavItem.Account.route) {
+            composable(
+                route = BottomNavItem.Account.route,
+                enterTransition = { fadeIn(animationSpec = tween(300)) },
+                exitTransition = { fadeOut(animationSpec = tween(300)) },
+                popEnterTransition = { fadeIn(animationSpec = tween(300)) },
+                popExitTransition = { fadeOut(animationSpec = tween(300)) }
+            ) {
                 val viewModel: AccountViewModel = hiltViewModel()
                 AccountScreen(
                     viewModel = viewModel,
@@ -403,7 +452,13 @@ fun AppNavigation() {
                     )
                 }
             }
-            composable(BottomNavItem.Score.route) {
+            composable(
+                route = BottomNavItem.Score.route,
+                enterTransition = { fadeIn(animationSpec = tween(300)) },
+                exitTransition = { fadeOut(animationSpec = tween(300)) },
+                popEnterTransition = { fadeIn(animationSpec = tween(300)) },
+                popExitTransition = { fadeOut(animationSpec = tween(300)) }
+            ) {
                 val viewModel: ScoreViewModel = hiltViewModel()
                 ScoreScreen(
                     viewModel = viewModel,
@@ -686,5 +741,50 @@ fun AppNavigation() {
                 )
             }
         }
+    }
+}
+
+/**
+ * 스케일 애니메이션이 적용된 네비게이션 바 아이템
+ */
+@Composable
+private fun RowScope.AnimatedNavigationBarItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: ImageVector,
+    label: String
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.85f else 1f,
+        animationSpec = tween(durationMillis = 100),
+        label = "navItemScale"
+    )
+
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .scale(scale)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = if (selected) Primary else Gray400
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) Primary else Gray500
+        )
     }
 }

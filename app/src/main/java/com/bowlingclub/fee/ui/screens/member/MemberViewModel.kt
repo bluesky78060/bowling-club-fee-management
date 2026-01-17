@@ -221,16 +221,6 @@ class MemberViewModel @Inject constructor(
         }
     }
 
-    @Deprecated(
-        message = "Use loadMemberById() instead and observe uiState.selectedMember",
-        replaceWith = ReplaceWith("loadMemberById(memberId)")
-    )
-    fun getMemberById(memberId: Long): Member? {
-        // First try to find in current list (fast path)
-        return _uiState.value.members.find { it.id == memberId }
-            ?: _uiState.value.selectedMember?.takeIf { it.id == memberId }
-    }
-
     fun loadMemberById(memberId: Long) {
         // Quick check in cache first
         val cached = _uiState.value.members.find { it.id == memberId }

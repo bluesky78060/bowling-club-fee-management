@@ -55,6 +55,7 @@ import com.bowlingclub.fee.ui.theme.Gray200
 import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
+import java.text.DecimalFormat
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -69,6 +70,7 @@ fun PaymentFormScreen(
     onBack: () -> Unit
 ) {
     val dateFormatter = remember { DateTimeFormatter.ofPattern("yyyy년 M월 d일") }
+    val numberFormatter = remember { DecimalFormat("#,###") }
     val uiState by viewModel.uiState.collectAsState()
 
     var selectedMember by remember { mutableStateOf<Member?>(null) }
@@ -167,13 +169,17 @@ fun PaymentFormScreen(
             // Amount
             FormSection(title = "납부 금액 *") {
                 OutlinedTextField(
-                    value = amount,
-                    onValueChange = {
-                        amount = it.filter { c -> c.isDigit() }
+                    value = if (amount.isNotEmpty()) {
+                        amount.toLongOrNull()?.let { numberFormatter.format(it) } ?: amount
+                    } else "",
+                    onValueChange = { newValue ->
+                        // 쉼표 제거하고 숫자만 추출
+                        val digitsOnly = newValue.replace(",", "").filter { c -> c.isDigit() }
+                        amount = digitsOnly
                         amountError = null
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("10000") },
+                    placeholder = { Text("10,000") },
                     isError = amountError != null,
                     supportingText = amountError?.let { { Text(it) } },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

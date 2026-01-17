@@ -1,6 +1,5 @@
 package com.bowlingclub.fee.ui.screens.donation
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bowlingclub.fee.data.repository.AccountRepository

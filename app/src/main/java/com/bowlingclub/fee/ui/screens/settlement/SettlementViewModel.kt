@@ -197,7 +197,7 @@ class SettlementViewModel @Inject constructor(
     ) {
         // 회원별 게임 수 맵 생성 (모든 참석자의 점수 요약에서 가져옴)
         val memberGameCounts: Map<Long, Int> = _uiState.value.formAllMemberSummaries
-            .associate { it.member_id to it.game_count }
+            .associate { it.memberId to it.gameCount }
 
         // 1게임당 게임비 (설정에서 가져옴)
         val gameFeePerGame = _uiState.value.gameFeePerGame
@@ -630,7 +630,7 @@ class SettlementViewModel @Inject constructor(
                 // 모임 참석자 ID 목록 (점수가 기록된 모든 회원)
                 // 점수가 없으면 전체 활성 회원을 기본 선택
                 val participantMemberIds = if (allSummaries.isNotEmpty()) {
-                    allSummaries.map { it.member_id }.toSet()
+                    allSummaries.map { it.memberId }.toSet()
                 } else {
                     activeMembers.map { it.id }.toSet()
                 }
@@ -642,7 +642,7 @@ class SettlementViewModel @Inject constructor(
 
                 // 벌금 대상자
                 val penaltyMembers = allSummaries.filter { it.isPenaltyTarget }
-                val penaltyMemberIds = penaltyMembers.map { it.member_id }.toSet()
+                val penaltyMemberIds = penaltyMembers.map { it.memberId }.toSet()
 
                 _uiState.update {
                     it.copy(

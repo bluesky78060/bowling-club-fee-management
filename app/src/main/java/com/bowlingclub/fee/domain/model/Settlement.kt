@@ -1,5 +1,6 @@
 package com.bowlingclub.fee.domain.model
 
+import com.bowlingclub.fee.domain.Constants
 import java.time.LocalDateTime
 
 /**
@@ -7,7 +8,7 @@ import java.time.LocalDateTime
  */
 object SettlementConfig {
     /** 벌금 금액 (원) - 3게임 합계가 기본에버리지×3 미만인 경우 부과 */
-    const val PENALTY_AMOUNT = 3000
+    const val PENALTY_AMOUNT = Constants.PENALTY_AMOUNT
 }
 
 data class Settlement(

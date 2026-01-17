@@ -20,6 +20,18 @@ android {
     namespace = "com.bowlingclub.fee"
     compileSdk = 35
 
+    signingConfigs {
+        create("release") {
+            val keystoreFile = localProperties.getProperty("RELEASE_STORE_FILE")
+            if (keystoreFile != null) {
+                storeFile = file(keystoreFile)
+                storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
+                keyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
+                keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "com.bowlingclub.fee"
         minSdk = 26
@@ -45,6 +57,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

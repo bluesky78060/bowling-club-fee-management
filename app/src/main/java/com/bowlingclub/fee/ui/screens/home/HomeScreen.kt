@@ -13,9 +13,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,10 +34,10 @@ import com.bowlingclub.fee.ui.components.AppCard
 import com.bowlingclub.fee.ui.components.QuickActionButton
 import com.bowlingclub.fee.ui.components.RankingItem
 import com.bowlingclub.fee.ui.components.SectionTitle
+import com.bowlingclub.fee.ui.components.ShimmerCard
 import com.bowlingclub.fee.ui.components.TransactionItem
 import com.bowlingclub.fee.ui.components.formatAmount
 import com.bowlingclub.fee.ui.components.getTransactionIcon
-import com.bowlingclub.fee.ui.theme.BackgroundSecondary
 import com.bowlingclub.fee.ui.theme.Danger
 import com.bowlingclub.fee.ui.theme.Gray200
 import com.bowlingclub.fee.ui.theme.Gray500
@@ -42,6 +45,7 @@ import com.bowlingclub.fee.ui.theme.Primary
 import com.bowlingclub.fee.ui.theme.Success
 import java.time.format.DateTimeFormatter
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
@@ -55,14 +59,22 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val pullToRefreshState = rememberPullToRefreshState()
 
-    Column(
+    PullToRefreshBox(
+        isRefreshing = uiState.isLoading,
+        onRefresh = { viewModel.refresh() },
+        state = pullToRefreshState,
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundSecondary)
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .background(MaterialTheme.colorScheme.background)
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+        ) {
         // Header
         Text(
             text = "볼링 동호회",
@@ -133,7 +145,8 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(12.dp))
         RecentTransactionsCard(transactions = uiState.recentTransactions)
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+        }
     }
 }
 

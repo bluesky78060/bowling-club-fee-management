@@ -1,21 +1,19 @@
 package com.bowlingclub.fee.ui.screens.settlement
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,10 +21,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Receipt
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -39,8 +35,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -56,24 +50,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.OffsetMapping
-import androidx.compose.ui.text.input.TransformedText
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.AnnotatedString
-import java.text.DecimalFormat
 import androidx.compose.ui.unit.dp
 import com.bowlingclub.fee.data.local.database.dao.MemberMeetingScoreSummary
 import com.bowlingclub.fee.data.repository.MeetingWithStats
 import com.bowlingclub.fee.domain.model.Member
 import com.bowlingclub.fee.domain.model.ReceiptResult
 import com.bowlingclub.fee.ui.components.AppCard
+import com.bowlingclub.fee.ui.components.NumberCommaTransformation
 import com.bowlingclub.fee.ui.components.PrimaryButton
 import com.bowlingclub.fee.ui.components.SectionTitle
 import com.bowlingclub.fee.ui.components.formatAmount
+import com.bowlingclub.fee.ui.screens.settlement.components.OcrFeeTarget
+import com.bowlingclub.fee.ui.screens.settlement.components.OcrFeeTargetDialog
+import com.bowlingclub.fee.ui.screens.settlement.components.OcrResultsCard
 import com.bowlingclub.fee.ui.theme.BackgroundSecondary
-import com.bowlingclub.fee.ui.theme.Gray200
-import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Danger
+import com.bowlingclub.fee.ui.theme.Gray200
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Gray600
 import com.bowlingclub.fee.ui.theme.Info
@@ -81,15 +73,6 @@ import com.bowlingclub.fee.ui.theme.Primary
 import com.bowlingclub.fee.ui.theme.Success
 import com.bowlingclub.fee.ui.theme.Warning
 import java.time.format.DateTimeFormatter
-
-/**
- * OCR 금액 적용 대상
- */
-enum class OcrFeeTarget {
-    GAME_FEE,   // 게임비
-    FOOD_FEE,   // 식비
-    OTHER_FEE   // 기타
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -355,7 +338,7 @@ fun SettlementFormScreen(
 
             // 회원별 게임 수 정보 표시 (모임 선택 시)
             if (allMemberSummaries.isNotEmpty()) {
-                val totalGames = allMemberSummaries.sumOf { it.game_count }
+                val totalGames = allMemberSummaries.sumOf { it.gameCount }
                 val totalGameFee = totalGames * gameFeePerGame
                 AppCard {
                     Column(modifier = Modifier.padding(12.dp)) {
@@ -397,7 +380,7 @@ fun SettlementFormScreen(
                                     color = Gray600
                                 )
                                 Text(
-                                    text = "${member.game_count}게임 × ${formatAmount(gameFeePerGame)} = ${formatAmount(member.game_count * gameFeePerGame)}",
+                                    text = "${member.gameCount}게임 × ${formatAmount(gameFeePerGame)} = ${formatAmount(member.gameCount * gameFeePerGame)}",
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -813,15 +796,15 @@ fun SettlementFormScreen(
                         HorizontalDivider(color = Gray200)
 
                         penaltyMembers.forEachIndexed { index, penaltyMember ->
-                            val isChecked = penaltyMemberIds.contains(penaltyMember.member_id)
+                            val isChecked = penaltyMemberIds.contains(penaltyMember.memberId)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
                                         val newIds = if (isChecked) {
-                                            penaltyMemberIds - penaltyMember.member_id
+                                            penaltyMemberIds - penaltyMember.memberId
                                         } else {
-                                            penaltyMemberIds + penaltyMember.member_id
+                                            penaltyMemberIds + penaltyMember.memberId
                                         }
                                         onPenaltyMemberIdsChange(newIds)
                                     }
@@ -832,9 +815,9 @@ fun SettlementFormScreen(
                                     checked = isChecked,
                                     onCheckedChange = {
                                         val newIds = if (it) {
-                                            penaltyMemberIds + penaltyMember.member_id
+                                            penaltyMemberIds + penaltyMember.memberId
                                         } else {
-                                            penaltyMemberIds - penaltyMember.member_id
+                                            penaltyMemberIds - penaltyMember.memberId
                                         }
                                         onPenaltyMemberIdsChange(newIds)
                                     },
@@ -848,7 +831,7 @@ fun SettlementFormScreen(
                                         fontWeight = FontWeight.Medium
                                     )
                                     Text(
-                                        text = "기준: ${penaltyMember.targetScore}점 / 실제: ${penaltyMember.total_score}점 (${penaltyMember.scoreDifference}점)",
+                                        text = "기준: ${penaltyMember.targetScore}점 / 실제: ${penaltyMember.totalScore}점 (${penaltyMember.scoreDifference}점)",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = Danger
                                     )
@@ -1253,238 +1236,5 @@ fun SettlementFormScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
         }
-    }
-}
-
-/**
- * 여러 OCR 결과 표시 카드
- */
-@Composable
-private fun OcrResultsCard(
-    results: List<ReceiptResult>,
-    onClearAll: () -> Unit
-) {
-    val totalAmount = results.sumOf { it.totalAmount ?: 0 }
-
-    AppCard {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Receipt,
-                        contentDescription = null,
-                        tint = Success,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "스캔한 영수증 (${results.size}건)",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-                Text(
-                    text = "전체 삭제",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Gray500,
-                    modifier = Modifier.clickable { onClearAll() }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 각 영수증 정보
-            results.forEachIndexed { index, result ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "${index + 1}. ${result.storeName ?: "영수증"}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Gray500
-                    )
-                    Text(
-                        text = formatAmount(result.totalAmount ?: 0),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-                if (index < results.lastIndex) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(color = Gray200)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 총 합계
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "영수증 합계",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = formatAmount(totalAmount),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Primary
-                )
-            }
-        }
-    }
-}
-
-/**
- * OCR 금액 적용 대상 선택 다이얼로그
- * 선택 시 기존 금액에 누적됨 (여러 영수증 합산 가능)
- */
-@Composable
-private fun OcrFeeTargetDialog(
-    amount: Int,
-    currentGameFee: Int,
-    currentFoodFee: Int,
-    currentOtherFee: Int,
-    onDismiss: () -> Unit,
-    onSelectTarget: (OcrFeeTarget, Int) -> Unit
-) {
-    val totalCurrentAmount = currentGameFee + currentFoodFee + currentOtherFee
-
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "금액 적용 대상 선택",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    text = "인식된 금액: ${formatAmount(amount)}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = Primary
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // 현재 입력된 금액 표시
-                if (totalCurrentAmount > 0) {
-                    Text(
-                        text = "현재 입력된 금액 (선택 시 더해집니다)",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Gray500
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    if (currentGameFee > 0) {
-                        Text(
-                            text = "🎳 게임비: ${formatAmount(currentGameFee)} → ${formatAmount(currentGameFee + amount)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Gray500
-                        )
-                    }
-                    if (currentFoodFee > 0) {
-                        Text(
-                            text = "🍽️ 식비: ${formatAmount(currentFoodFee)} → ${formatAmount(currentFoodFee + amount)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Gray500
-                        )
-                    }
-                    if (currentOtherFee > 0) {
-                        Text(
-                            text = "📦 기타: ${formatAmount(currentOtherFee)} → ${formatAmount(currentOtherFee + amount)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Gray500
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-
-                Text(
-                    text = "이 금액을 어디에 더하시겠습니까?",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Gray500
-                )
-            }
-        },
-        confirmButton = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.End
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    androidx.compose.material3.TextButton(
-                        onClick = { onSelectTarget(OcrFeeTarget.GAME_FEE, currentGameFee + amount) }
-                    ) {
-                        Text("🎳 게임비", color = Primary)
-                    }
-                    androidx.compose.material3.TextButton(
-                        onClick = { onSelectTarget(OcrFeeTarget.FOOD_FEE, currentFoodFee + amount) }
-                    ) {
-                        Text("🍽️ 식비", color = Warning)
-                    }
-                    androidx.compose.material3.TextButton(
-                        onClick = { onSelectTarget(OcrFeeTarget.OTHER_FEE, currentOtherFee + amount) }
-                    ) {
-                        Text("📦 기타", color = Gray500)
-                    }
-                }
-            }
-        },
-        dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text("취소", color = Gray500)
-            }
-        }
-    )
-}
-
-/**
- * 천단위 쉼표를 표시하는 VisualTransformation
- */
-class NumberCommaTransformation : VisualTransformation {
-    private val decimalFormat = DecimalFormat("#,###")
-
-    override fun filter(text: AnnotatedString): TransformedText {
-        val originalText = text.text
-        if (originalText.isEmpty()) {
-            return TransformedText(text, OffsetMapping.Identity)
-        }
-
-        val number = originalText.toLongOrNull() ?: return TransformedText(text, OffsetMapping.Identity)
-        val formatted = decimalFormat.format(number)
-
-        val offsetMapping = object : OffsetMapping {
-            override fun originalToTransformed(offset: Int): Int {
-                if (offset == 0) return 0
-                // 원본 텍스트의 offset 위치까지 몇 개의 쉼표가 추가되는지 계산
-                val digitsBeforeOffset = originalText.take(offset)
-                val formattedBeforeOffset = if (digitsBeforeOffset.isEmpty()) "" else {
-                    digitsBeforeOffset.toLongOrNull()?.let { decimalFormat.format(it) } ?: digitsBeforeOffset
-                }
-                return formattedBeforeOffset.length
-            }
-
-            override fun transformedToOriginal(offset: Int): Int {
-                if (offset == 0) return 0
-                // 변환된 텍스트에서 쉼표를 제외한 실제 위치 계산
-                val commaCount = formatted.take(offset).count { it == ',' }
-                return (offset - commaCount).coerceIn(0, originalText.length)
-            }
-        }
-
-        return TransformedText(AnnotatedString(formatted), offsetMapping)
     }
 }

@@ -47,3 +47,11 @@ val AvatarMale = Color(0xFF3B82F6)
 val AvatarFemale = Color(0xFFEC4899)
 val AvatarMaleBackground = Color(0xFFDBEAFE)
 val AvatarFemaleBackground = Color(0xFFFFB6C1)
+
+// Dark Mode Colors
+val DarkBackground = Color(0xFF121212)
+val DarkSurface = Color(0xFF1E1E1E)
+val DarkSurfaceVariant = Color(0xFF2D2D2D)
+val DarkBorder = Color(0xFF3D3D3D)
+val DarkOnSurface = Color(0xFFE1E1E1)
+val DarkOnSurfaceVariant = Color(0xFF9E9E9E)

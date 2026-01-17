@@ -1,6 +1,8 @@
 package com.bowlingclub.fee.ui.screens.member
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,12 +19,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -32,6 +37,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,24 +53,93 @@ import com.bowlingclub.fee.domain.model.Member
 import com.bowlingclub.fee.domain.model.MemberStatus
 import com.bowlingclub.fee.ui.components.AppCard
 import com.bowlingclub.fee.ui.components.BadgeType
+import com.bowlingclub.fee.ui.components.BottomSheetOption
+import com.bowlingclub.fee.ui.components.ConfirmBottomSheet
 import com.bowlingclub.fee.ui.components.MemberAvatar
+import com.bowlingclub.fee.ui.components.OptionsBottomSheet
+import com.bowlingclub.fee.ui.components.ExtendedAppFab
 import com.bowlingclub.fee.ui.components.StatusBadge
+import com.bowlingclub.fee.ui.components.SwipeToDeleteItem
+import com.bowlingclub.fee.ui.theme.Danger
 import com.bowlingclub.fee.ui.theme.BackgroundSecondary
 import com.bowlingclub.fee.ui.theme.Gray200
 import com.bowlingclub.fee.ui.theme.Gray400
 import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Primary
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun MemberListScreen(
     viewModel: MemberViewModel = hiltViewModel(),
     onAddMember: () -> Unit = {},
-    onMemberClick: (Long) -> Unit = {}
+    onMemberClick: (Long) -> Unit = {},
+    onEditMember: ((Long) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf<MemberStatus?>(MemberStatus.ACTIVE) }
+
+    // 바텀시트 상태
+    var showOptionsSheet by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var selectedMemberForAction by remember { mutableStateOf<Member?>(null) }
+
+    // 옵션 바텀시트
+    OptionsBottomSheet(
+        visible = showOptionsSheet,
+        onDismiss = {
+            showOptionsSheet = false
+            selectedMemberForAction = null
+        },
+        title = selectedMemberForAction?.name ?: "",
+        options = listOf(
+            BottomSheetOption(
+                icon = Icons.Default.Person,
+                label = "상세 보기",
+                onClick = {
+                    selectedMemberForAction?.let { onMemberClick(it.id) }
+                }
+            ),
+            BottomSheetOption(
+                icon = Icons.Default.Edit,
+                label = "수정",
+                onClick = {
+                    selectedMemberForAction?.let { member ->
+                        onEditMember?.invoke(member.id)
+                    }
+                },
+                enabled = onEditMember != null
+            ),
+            BottomSheetOption(
+                icon = Icons.Default.Delete,
+                label = "삭제",
+                onClick = { showDeleteConfirm = true },
+                tint = Danger
+            )
+        )
+    )
+
+    // 삭제 확인 바텀시트
+    ConfirmBottomSheet(
+        visible = showDeleteConfirm,
+        onDismiss = {
+            showDeleteConfirm = false
+            selectedMemberForAction = null
+        },
+        title = "회원 삭제",
+        message = "${selectedMemberForAction?.name}님을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.",
+        confirmText = "삭제",
+        confirmColor = Danger,
+        onConfirm = {
+            selectedMemberForAction?.let { viewModel.deleteMember(it) }
+        }
+    )
+
+    // 리스트 스크롤 상태
+    val listState = rememberLazyListState()
+    val isScrolling by remember {
+        derivedStateOf { listState.isScrollInProgress }
+    }
 
     Scaffold(
         topBar = {
@@ -75,20 +150,20 @@ fun MemberListScreen(
                         fontWeight = FontWeight.Bold
                     )
                 },
-                actions = {
-                    IconButton(onClick = onAddMember) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = "회원 추가",
-                            tint = Primary
-                        )
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = BackgroundSecondary
                 )
             )
         },
+        floatingActionButton = {
+            ExtendedAppFab(
+                text = "회원 추가",
+                onClick = onAddMember,
+                icon = Icons.Default.Add,
+                expanded = !isScrolling
+            )
+        },
+        floatingActionButtonPosition = FabPosition.End,
         containerColor = BackgroundSecondary
     ) { paddingValues ->
         Column(
@@ -170,7 +245,6 @@ fun MemberListScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Member List
-            val listState = rememberLazyListState()
             LazyColumn(
                 state = listState,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -180,23 +254,38 @@ fun MemberListScreen(
                     key = { it.id },
                     contentType = { "member" }
                 ) { member ->
-                    MemberCard(
-                        member = member,
-                        onClick = { onMemberClick(member.id) }
-                    )
+                    SwipeToDeleteItem(
+                        onDelete = { viewModel.deleteMember(member) },
+                        onEdit = onEditMember?.let { edit -> { edit(member.id) } }
+                    ) {
+                        MemberCard(
+                            member = member,
+                            onClick = { onMemberClick(member.id) },
+                            onLongClick = {
+                                selectedMemberForAction = member
+                                showOptionsSheet = true
+                            }
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MemberCard(
     member: Member,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {}
 ) {
     AppCard(
-        onClick = onClick
+        modifier = Modifier.combinedClickable(
+            onClick = onClick,
+            onLongClick = onLongClick
+        ),
+        onClick = null // AppCard의 기본 onClick 비활성화, combinedClickable 사용
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
