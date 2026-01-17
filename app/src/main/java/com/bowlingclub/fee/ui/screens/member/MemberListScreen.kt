@@ -7,11 +7,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,10 +25,11 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -39,9 +42,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -57,7 +62,6 @@ import com.bowlingclub.fee.ui.components.BottomSheetOption
 import com.bowlingclub.fee.ui.components.ConfirmBottomSheet
 import com.bowlingclub.fee.ui.components.MemberAvatar
 import com.bowlingclub.fee.ui.components.OptionsBottomSheet
-import com.bowlingclub.fee.ui.components.ExtendedAppFab
 import com.bowlingclub.fee.ui.components.StatusBadge
 import com.bowlingclub.fee.ui.components.SwipeToDeleteItem
 import com.bowlingclub.fee.ui.theme.Danger
@@ -83,6 +87,17 @@ fun MemberListScreen(
     var showOptionsSheet by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var selectedMemberForAction by remember { mutableStateOf<Member?>(null) }
+
+    // 스와이프 삭제 확인 다이얼로그 상태
+    var showSwipeDeleteConfirm by remember { mutableStateOf(false) }
+    var memberToDelete by remember { mutableStateOf<Member?>(null) }
+    var swipeResetTrigger by remember { mutableIntStateOf(0) }
+
+    // 화면이 다시 활성화될 때 스와이프 상태 리셋
+    LifecycleResumeEffect(Unit) {
+        swipeResetTrigger++
+        onPauseOrDispose { }
+    }
 
     // 옵션 바텀시트
     OptionsBottomSheet(
@@ -119,7 +134,7 @@ fun MemberListScreen(
         )
     )
 
-    // 삭제 확인 바텀시트
+    // 삭제 확인 바텀시트 (롱프레스 메뉴에서)
     ConfirmBottomSheet(
         visible = showDeleteConfirm,
         onDismiss = {
@@ -132,6 +147,24 @@ fun MemberListScreen(
         confirmColor = Danger,
         onConfirm = {
             selectedMemberForAction?.let { viewModel.deleteMember(it) }
+        }
+    )
+
+    // 스와이프 삭제 확인 바텀시트
+    ConfirmBottomSheet(
+        visible = showSwipeDeleteConfirm,
+        onDismiss = {
+            showSwipeDeleteConfirm = false
+            memberToDelete = null
+            swipeResetTrigger++ // 스와이프 상태 리셋
+        },
+        title = "회원 삭제",
+        message = "${memberToDelete?.name}님을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.",
+        confirmText = "삭제",
+        confirmColor = Danger,
+        onConfirm = {
+            memberToDelete?.let { viewModel.deleteMember(it) }
+            memberToDelete = null
         }
     )
 
@@ -155,15 +188,6 @@ fun MemberListScreen(
                 )
             )
         },
-        floatingActionButton = {
-            ExtendedAppFab(
-                text = "회원 추가",
-                onClick = onAddMember,
-                icon = Icons.Default.Add,
-                expanded = !isScrolling
-            )
-        },
-        floatingActionButtonPosition = FabPosition.End,
         containerColor = BackgroundSecondary
     ) { paddingValues ->
         Column(
@@ -200,9 +224,11 @@ fun MemberListScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Filter Chips
+            // Filter Chips + Add Button
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 FilterChip(
                     selected = selectedFilter == MemberStatus.ACTIVE,
@@ -240,6 +266,24 @@ fun MemberListScreen(
                         selectedLabelColor = Color.White
                     )
                 )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Add Member Button
+                Button(
+                    onClick = onAddMember,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("추가", style = MaterialTheme.typography.labelLarge)
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -251,11 +295,14 @@ fun MemberListScreen(
             ) {
                 items(
                     items = uiState.members,
-                    key = { it.id },
+                    key = { "${it.id}_$swipeResetTrigger" },
                     contentType = { "member" }
                 ) { member ->
                     SwipeToDeleteItem(
-                        onDelete = { viewModel.deleteMember(member) },
+                        onDelete = {
+                            memberToDelete = member
+                            showSwipeDeleteConfirm = true
+                        },
                         onEdit = onEditMember?.let { edit -> { edit(member.id) } }
                     ) {
                         MemberCard(

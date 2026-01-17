@@ -84,23 +84,6 @@
         android:fillColor="#E53935"
         android:pathData="M64,33h4v1.2h-4z"/>
 
-    <!-- Money symbol (₩) for fee management -->
-    <path
-        android:fillColor="#FFD54F"
-        android:pathData="M70,68
-            l-3,8
-            l-1,-2.5
-            l-2,0
-            l-1,2.5
-            l-3,-8
-            l2,0
-            l1.5,5
-            l0.5,-1.5
-            l2,0
-            l0.5,1.5
-            l1.5,-5
-            z"/>
-
     <!-- Money circle background -->
     <path
         android:fillColor="#FFA000"

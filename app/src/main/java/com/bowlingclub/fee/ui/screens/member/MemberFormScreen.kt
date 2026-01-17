@@ -53,6 +53,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.bowlingclub.fee.domain.model.Gender
+import com.bowlingclub.fee.ui.components.PhoneNumberTransformation
+import com.bowlingclub.fee.ui.components.extractPhoneDigits
+import com.bowlingclub.fee.ui.components.formatPhoneNumber
 import com.bowlingclub.fee.domain.model.Member
 import com.bowlingclub.fee.domain.model.MemberStatus
 import com.bowlingclub.fee.ui.theme.BackgroundSecondary
@@ -77,7 +80,7 @@ fun MemberFormScreen(
     val dateFormatter = remember { DateTimeFormatter.ofPattern("yyyy년 M월 d일") }
 
     var name by remember { mutableStateOf(member?.name ?: "") }
-    var phone by remember { mutableStateOf(member?.phone ?: "") }
+    var phone by remember { mutableStateOf(member?.phone?.extractPhoneDigits() ?: "") }
     var gender by remember { mutableStateOf(member?.gender ?: Gender.MALE) }
     var joinDate by remember { mutableStateOf(member?.joinDate ?: LocalDate.now()) }
     var initialAverage by remember { mutableStateOf(member?.initialAverage?.toString() ?: "150") }
@@ -89,6 +92,8 @@ fun MemberFormScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var nameError by remember { mutableStateOf<String?>(null) }
     var phoneError by remember { mutableStateOf<String?>(null) }
+    var averageError by remember { mutableStateOf<String?>(null) }
+    var handicapError by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -141,8 +146,10 @@ fun MemberFormScreen(
             FormSection(title = "연락처 *") {
                 OutlinedTextField(
                     value = phone,
-                    onValueChange = {
-                        phone = it.filter { c -> c.isDigit() || c == '-' }
+                    onValueChange = { input ->
+                        // 숫자만 추출하여 저장 (최대 11자리)
+                        val digits = input.filter { it.isDigit() }.take(11)
+                        phone = digits
                         phoneError = null
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -150,6 +157,7 @@ fun MemberFormScreen(
                     isError = phoneError != null,
                     supportingText = phoneError?.let { { Text(it) } },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    visualTransformation = PhoneNumberTransformation(),
                     shape = RoundedCornerShape(12.dp),
                     colors = textFieldColors(),
                     singleLine = true
@@ -202,9 +210,14 @@ fun MemberFormScreen(
             FormSection(title = "초기 에버리지") {
                 OutlinedTextField(
                     value = initialAverage,
-                    onValueChange = { initialAverage = it.filter { c -> c.isDigit() } },
+                    onValueChange = {
+                        initialAverage = it.filter { c -> c.isDigit() }.take(3)
+                        averageError = null
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("150") },
+                    isError = averageError != null,
+                    supportingText = averageError?.let { { Text(it) } },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = RoundedCornerShape(12.dp),
                     colors = textFieldColors(),
@@ -216,9 +229,14 @@ fun MemberFormScreen(
             FormSection(title = "핸디캡") {
                 OutlinedTextField(
                     value = handicap,
-                    onValueChange = { handicap = it.filter { c -> c.isDigit() } },
+                    onValueChange = {
+                        handicap = it.filter { c -> c.isDigit() }.take(3)
+                        handicapError = null
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("0") },
+                    isError = handicapError != null,
+                    supportingText = handicapError?.let { { Text(it) } },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = RoundedCornerShape(12.dp),
                     colors = textFieldColors(),
@@ -304,17 +322,34 @@ fun MemberFormScreen(
                     if (phone.isBlank()) {
                         phoneError = "연락처를 입력해주세요"
                         isValid = false
+                    } else if (phone.length < 10) {
+                        phoneError = "올바른 연락처를 입력해주세요 (10자리 이상)"
+                        isValid = false
+                    }
+
+                    // 에버리지 범위 검증 (0-300)
+                    val avgValue = initialAverage.toIntOrNull()
+                    if (avgValue == null || avgValue < 0 || avgValue > 300) {
+                        averageError = "에버리지는 0~300 사이로 입력해주세요"
+                        isValid = false
+                    }
+
+                    // 핸디캡 범위 검증 (0-100)
+                    val hcpValue = handicap.toIntOrNull()
+                    if (hcpValue == null || hcpValue < 0 || hcpValue > 100) {
+                        handicapError = "핸디캡은 0~100 사이로 입력해주세요"
+                        isValid = false
                     }
 
                     if (isValid) {
                         val newMember = Member(
                             id = member?.id ?: 0,
                             name = name.trim(),
-                            phone = phone.trim(),
+                            phone = phone.formatPhoneNumber(),
                             gender = gender,
                             joinDate = joinDate,
-                            initialAverage = initialAverage.toIntOrNull() ?: 150,
-                            handicap = handicap.toIntOrNull() ?: 0,
+                            initialAverage = avgValue!!,
+                            handicap = hcpValue!!,
                             status = status,
                             isDiscounted = isDiscounted,
                             memo = memo.trim()

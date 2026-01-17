@@ -755,6 +755,7 @@ fun SwipeToDeleteItem(
     onDelete: () -> Unit,
     onEdit: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    resetTrigger: Int = 0,
     content: @Composable () -> Unit
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
@@ -777,6 +778,13 @@ fun SwipeToDeleteItem(
     LaunchedEffect(dismissState.currentValue) {
         if (dismissState.currentValue == SwipeToDismissBoxValue.StartToEnd && onEdit != null) {
             dismissState.reset()
+        }
+    }
+
+    // 외부 트리거로 상태 리셋 (삭제 취소 시, 애니메이션 없이 즉시)
+    LaunchedEffect(resetTrigger) {
+        if (resetTrigger > 0 && dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
         }
     }
 
@@ -808,7 +816,7 @@ private fun SwipeBackground(
         targetValue = when (dismissState.targetValue) {
             SwipeToDismissBoxValue.EndToStart -> Danger
             SwipeToDismissBoxValue.StartToEnd -> if (hasEdit) Primary else Color.Transparent
-            else -> Color.LightGray.copy(alpha = 0.3f)
+            else -> Color.Transparent
         },
         label = "swipeBackgroundColor"
     )
@@ -828,6 +836,7 @@ private fun SwipeBackground(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .clip(RoundedCornerShape(16.dp))
             .background(color)
             .padding(horizontal = 20.dp),
         contentAlignment = alignment

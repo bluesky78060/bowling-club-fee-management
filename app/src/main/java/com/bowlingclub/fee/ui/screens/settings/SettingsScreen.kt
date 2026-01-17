@@ -25,6 +25,15 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -288,21 +297,22 @@ fun SettingsScreen(
                 // 데이터베이스 백업/복원
                 SettingsSection(title = "데이터베이스 백업") {
                     SettingsInfoItem(
+                        icon = Icons.Default.Storage,
                         label = "데이터베이스 크기",
                         value = uiState.databaseSize
                     )
-                    HorizontalDivider(color = Gray200)
+                    HorizontalDivider(color = Gray200, modifier = Modifier.padding(vertical = 4.dp))
                     SettingsClickableItem(
-                        icon = "💾",
+                        icon = Icons.Default.CloudUpload,
                         label = "데이터베이스 백업",
                         description = "회원, 정산 등 모든 데이터를 파일로 저장",
                         onClick = {
                             dbBackupLauncher.launch(viewModel.generateBackupFileName())
                         }
                     )
-                    HorizontalDivider(color = Gray200)
+                    HorizontalDivider(color = Gray200, modifier = Modifier.padding(vertical = 4.dp))
                     SettingsClickableItem(
-                        icon = "📂",
+                        icon = Icons.Default.CloudDownload,
                         label = "데이터베이스 복원",
                         description = "백업 파일에서 데이터 복원 (앱 재시작 필요)",
                         onClick = {
@@ -315,7 +325,7 @@ fun SettingsScreen(
                 // 설정 관리
                 SettingsSection(title = "설정 관리") {
                     SettingsClickableItem(
-                        icon = "📤",
+                        icon = Icons.Default.Upload,
                         label = "설정 내보내기",
                         description = "설정을 JSON 파일로 저장",
                         onClick = {
@@ -324,9 +334,9 @@ fun SettingsScreen(
                             exportLauncher.launch("bowling_settings_$timestamp.json")
                         }
                     )
-                    HorizontalDivider(color = Gray200)
+                    HorizontalDivider(color = Gray200, modifier = Modifier.padding(vertical = 4.dp))
                     SettingsClickableItem(
-                        icon = "📥",
+                        icon = Icons.Default.Download,
                         label = "설정 가져오기",
                         description = "JSON 파일에서 설정 복원",
                         onClick = {
@@ -338,7 +348,7 @@ fun SettingsScreen(
                 // 초기화
                 SettingsSection(title = "초기화") {
                     SettingsClickableItem(
-                        icon = "🔄",
+                        icon = Icons.Default.Refresh,
                         label = "설정 초기화",
                         description = "모든 설정을 기본값으로 복원",
                         onClick = { viewModel.showResetDialog() },
@@ -349,10 +359,11 @@ fun SettingsScreen(
                 // 앱 정보
                 SettingsSection(title = "앱 정보") {
                     SettingsInfoItem(
+                        icon = Icons.Default.Info,
                         label = "버전",
                         value = BuildConfig.VERSION_NAME
                     )
-                    HorizontalDivider(color = Gray200)
+                    HorizontalDivider(color = Gray200, modifier = Modifier.padding(vertical = 4.dp))
                     SettingsInfoItem(
                         label = "개발",
                         value = "볼링 동호회"
@@ -494,7 +505,7 @@ private fun SettingsNumberField(
 
 @Composable
 private fun SettingsClickableItem(
-    icon: String,
+    icon: ImageVector,
     label: String,
     description: String,
     onClick: () -> Unit,
@@ -506,6 +517,11 @@ private fun SettingsClickableItem(
         isWarning -> Warning.copy(alpha = 0.1f)
         else -> Primary.copy(alpha = 0.1f)
     }
+    val iconColor = when {
+        isDanger -> Danger
+        isWarning -> Warning
+        else -> Primary
+    }
     val textColor = when {
         isDanger -> Danger
         isWarning -> Warning
@@ -515,37 +531,45 @@ private fun SettingsClickableItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
+            .padding(vertical = 12.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .size(44.dp)
+                .clip(RoundedCornerShape(12.dp))
                 .background(bgColor),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = icon, style = MaterialTheme.typography.titleMedium)
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(24.dp)
+            )
         }
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
                 color = textColor
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = Gray500
             )
         }
-        Text(
-            text = "›",
-            style = MaterialTheme.typography.titleLarge,
-            color = Gray500
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = Gray500,
+            modifier = Modifier.size(24.dp)
         )
     }
 }
@@ -553,22 +577,41 @@ private fun SettingsClickableItem(
 @Composable
 private fun SettingsInfoItem(
     label: String,
-    value: String
+    value: String,
+    icon: ImageVector? = null
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .padding(vertical = 12.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (icon != null) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Gray200.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Gray600,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+        }
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
             color = Gray500
         )
     }
