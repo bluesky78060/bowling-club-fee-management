@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>앱 아이콘 - 볼링 동호회 회비 관리</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+        }
+        .icon-container {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+        .icon-box {
+            text-align: center;
+        }
+        .icon-label {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        canvas {
+            border-radius: 22%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .download-btn {
+            background: #2563EB;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .download-btn:hover {
+            background: #1D4ED8;
+        }
+        .instructions {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            margin-top: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .instructions ol {
+            padding-left: 20px;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <h1>볼링 동호회 회비 관리</h1>
+    <p class="subtitle">Google Play Console 등록용 앱 아이콘</p>
+
+    <div class="icon-container">
+        <div class="icon-box">
+            <canvas id="icon512" width="512" height="512"></canvas>
+            <p class="icon-label">512 x 512 (Play Store)</p>
+        </div>
+        <div class="icon-box">
+            <canvas id="icon192" width="192" height="192"></canvas>
+            <p class="icon-label">192 x 192</p>
+        </div>
+        <div class="icon-box">
+            <canvas id="icon96" width="96" height="96"></canvas>
+            <p class="icon-label">96 x 96</p>
+        </div>
+    </div>
+
+    <div>
+        <button class="download-btn" onclick="downloadIcon(512)">512x512 다운로드</button>
+        <button class="download-btn" onclick="downloadIcon(192)">192x192 다운로드</button>
+    </div>
+
+    <div class="instructions">
+        <h3>Google Play Console 등록 방법</h3>
+        <ol>
+            <li><strong>512x512 다운로드</strong> 버튼 클릭</li>
+            <li>Google Play Console → 앱 설정 → 기본 스토어 등록정보</li>
+            <li><strong>앱 아이콘</strong> 섹션에서 다운로드한 PNG 파일 업로드</li>
+            <li>저장 후 검토 제출</li>
+        </ol>
+        <p style="color: #666; font-size: 14px; margin-top: 20px;">
+            * 아이콘 규격: 512 x 512 픽셀, PNG 형식, 32비트 컬러
+        </p>
+    </div>
+
+    <script>
+        function drawIcon(canvas) {
+            const ctx = canvas.getContext('2d');
+            const size = canvas.width;
+            const scale = size / 108;
+
+            // Background
+            ctx.fillStyle = '#2563EB';
+            ctx.fillRect(0, 0, size, size);
+
+            // Bowling Ball - Main Circle
+            ctx.beginPath();
+            ctx.arc(54 * scale, 58 * scale, 22 * scale, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
+
+            // Bowling Ball Holes
+            const holes = [
+                { x: 50, y: 50 },
+                { x: 46, y: 58 },
+                { x: 54, y: 58 }
+            ];
+            ctx.fillStyle = '#1565C0';
+            holes.forEach(hole => {
+                ctx.beginPath();
+                ctx.arc(hole.x * scale, hole.y * scale, 3 * scale, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Shine effect
+            ctx.beginPath();
+            ctx.ellipse(42 * scale, 48 * scale, 4 * scale, 2 * scale, -0.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#E3F2FD';
+            ctx.fill();
+
+            // Draw bowling pins
+            function drawPin(x, y, pinScale) {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+
+                // Pin head (top)
+                ctx.arc(x * scale, (y + 2) * scale, 2.5 * pinScale * scale, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Pin neck
+                ctx.beginPath();
+                ctx.moveTo((x - 1.5) * scale, (y + 4) * scale);
+                ctx.lineTo((x + 1.5) * scale, (y + 4) * scale);
+                ctx.lineTo((x + 2.5) * scale, (y + 10) * scale);
+                ctx.lineTo((x - 2.5) * scale, (y + 10) * scale);
+                ctx.closePath();
+                ctx.fill();
+
+                // Pin body (bottom)
+                ctx.beginPath();
+                ctx.arc(x * scale, (y + 10) * scale, 2.8 * pinScale * scale, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Red stripe
+                ctx.fillStyle = '#E53935';
+                ctx.fillRect((x - 2) * scale, (y + 5.5) * scale, 4 * scale, 1.2 * scale);
+            }
+
+            // Draw 3 pins
+            drawPin(54, 20, 1);      // Center pin
+            drawPin(42, 26, 0.85);   // Left pin
+            drawPin(66, 26, 0.85);   // Right pin
+
+            // Money badge circle (orange)
+            ctx.beginPath();
+            ctx.arc(70 * scale, 74 * scale, 10 * scale, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFA000';
+            ctx.fill();
+
+            // White border for badge
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1.5 * scale;
+            ctx.stroke();
+
+            // ₩ symbol
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = `bold ${12 * scale}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('₩', 70 * scale, 74 * scale);
+        }
+
+        // Draw all icons
+        drawIcon(document.getElementById('icon512'));
+        drawIcon(document.getElementById('icon192'));
+        drawIcon(document.getElementById('icon96'));
+
+        function downloadIcon(size) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            drawIcon(canvas);
+
+            const link = document.createElement('a');
+            link.download = `bowling-fee-icon-${size}x${size}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+    </script>
+</body>
+</html>

@@ -4,12 +4,113 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Bowling Ball -->
+
+    <!-- Bowling Ball - Main Circle -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,54m-24,0a24,24 0,1 1,48 0a24,24 0,1 1,-48 0"/>
-    <!-- Bowling Pin 1 -->
+        android:pathData="M54,58m-22,0a22,22 0,1 1,44 0a22,22 0,1 1,-44 0"/>
+
+    <!-- Bowling Ball - Hole 1 (top) -->
+    <path
+        android:fillColor="#1565C0"
+        android:pathData="M50,50m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"/>
+
+    <!-- Bowling Ball - Hole 2 (bottom left) -->
+    <path
+        android:fillColor="#1565C0"
+        android:pathData="M46,58m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"/>
+
+    <!-- Bowling Ball - Hole 3 (bottom right) -->
+    <path
+        android:fillColor="#1565C0"
+        android:pathData="M54,58m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0"/>
+
+    <!-- Bowling Ball - Shine effect -->
+    <path
+        android:fillColor="#E3F2FD"
+        android:pathData="M40,48a4,6 -30,0 1,8 -4"/>
+
+    <!-- Pin 1 (center back) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,30c-2,0 -3.5,-8 -3.5,-10s1.5,-4 3.5,-4s3.5,2 3.5,4S56,30 54,30z"/>
+        android:pathData="M54,22
+            c2,0 3,1.5 3,3
+            c0,1 -0.5,2 -1,3
+            c0.5,1 1.5,3 1.5,5
+            c0,2 -1.5,3.5 -3.5,3.5
+            c-2,0 -3.5,-1.5 -3.5,-3.5
+            c0,-2 1,-4 1.5,-5
+            c-0.5,-1 -1,-2 -1,-3
+            c0,-1.5 1,-3 3,-3z"/>
+
+    <!-- Pin stripe 1 -->
+    <path
+        android:fillColor="#E53935"
+        android:pathData="M51.5,28h5v1.5h-5z"/>
+
+    <!-- Pin 2 (left) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M42,28
+            c1.5,0 2.5,1.2 2.5,2.5
+            c0,0.8 -0.4,1.5 -0.8,2.2
+            c0.4,0.8 1.2,2.5 1.2,4
+            c0,1.5 -1.2,2.8 -2.8,2.8
+            c-1.6,0 -2.8,-1.3 -2.8,-2.8
+            c0,-1.5 0.8,-3.2 1.2,-4
+            c-0.4,-0.7 -0.8,-1.4 -0.8,-2.2
+            c0,-1.3 1,-2.5 2.5,-2.5z"/>
+
+    <!-- Pin stripe 2 -->
+    <path
+        android:fillColor="#E53935"
+        android:pathData="M40,33h4v1.2h-4z"/>
+
+    <!-- Pin 3 (right) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M66,28
+            c1.5,0 2.5,1.2 2.5,2.5
+            c0,0.8 -0.4,1.5 -0.8,2.2
+            c0.4,0.8 1.2,2.5 1.2,4
+            c0,1.5 -1.2,2.8 -2.8,2.8
+            c-1.6,0 -2.8,-1.3 -2.8,-2.8
+            c0,-1.5 0.8,-3.2 1.2,-4
+            c-0.4,-0.7 -0.8,-1.4 -0.8,-2.2
+            c0,-1.3 1,-2.5 2.5,-2.5z"/>
+
+    <!-- Pin stripe 3 -->
+    <path
+        android:fillColor="#E53935"
+        android:pathData="M64,33h4v1.2h-4z"/>
+
+    <!-- Money symbol (₩) for fee management -->
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M70,68
+            l-3,8
+            l-1,-2.5
+            l-2,0
+            l-1,2.5
+            l-3,-8
+            l2,0
+            l1.5,5
+            l0.5,-1.5
+            l2,0
+            l0.5,1.5
+            l1.5,-5
+            z"/>
+
+    <!-- Money circle background -->
+    <path
+        android:fillColor="#FFA000"
+        android:pathData="M68,72m-8,0a8,8 0,1 1,16 0a8,8 0,1 1,-16 0"/>
+
+    <!-- ₩ symbol -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FFFFFF"
+        android:pathData="M63,69l2.5,6l2.5,-6M63,71h5M63,73h5"/>
+
 </vector>
