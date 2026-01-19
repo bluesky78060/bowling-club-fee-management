@@ -176,8 +176,10 @@ fun ScoreInputScreen(
         context.startActivity(Intent.createChooser(shareIntent, "점수 공유"))
     }
 
-    // 모임 선택 및 기존 점수 로드
+    // 모임 선택 및 기존 점수 로드 - 모임 변경 시 상태 초기화
     LaunchedEffect(meeting.id) {
+        scoreEntries.clear()
+        isInitialized = false
         viewModel.selectMeeting(meeting)
     }
 
@@ -363,34 +365,32 @@ fun ScoreInputScreen(
 
             if (scoreEntries.isEmpty()) {
                 // Empty state
-                Box(
+                Column(
                     modifier = Modifier
-                        .weight(1f)
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(vertical = 80.dp, horizontal = 32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Text(
+                        text = "🎳",
+                        style = MaterialTheme.typography.displayLarge
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "참석 회원을 추가해주세요",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Gray500,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = { showMemberDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = Primary)
                     ) {
-                        Text(
-                            text = "🎳",
-                            style = MaterialTheme.typography.displayLarge
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "참석 회원을 추가해주세요",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = Gray500
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Button(
-                            onClick = { showMemberDialog = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = Primary)
-                        ) {
-                            Icon(Icons.Default.PersonAdd, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("회원 추가")
-                        }
+                        Icon(Icons.Default.PersonAdd, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("회원 추가")
                     }
                 }
             } else {
@@ -744,7 +744,10 @@ fun ScoreInputScreen(
             title = { Text("참석 회원 선택") },
             text = {
                 LazyColumn {
-                    itemsIndexed(uiState.activeMembers) { _, member ->
+                    itemsIndexed(
+                        items = uiState.activeMembers,
+                        key = { _, member -> member.id }
+                    ) { _, member ->
                         val isAlreadyAdded = scoreEntries.any { it.memberId == member.id }
                         val isSelected = selectedMembers[member.id] ?: false
 

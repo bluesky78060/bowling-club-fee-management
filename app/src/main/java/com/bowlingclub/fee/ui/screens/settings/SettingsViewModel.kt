@@ -9,6 +9,7 @@ import com.bowlingclub.fee.data.repository.SettingsRepository
 import com.bowlingclub.fee.domain.model.AppSettings
 import com.bowlingclub.fee.domain.model.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,13 +39,16 @@ class SettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
+    private var settingsJob: Job? = null
+
     init {
         loadSettings()
         loadDatabaseSize()
     }
 
     private fun loadSettings() {
-        viewModelScope.launch {
+        settingsJob?.cancel()
+        settingsJob = viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
                 _uiState.update { it.copy(settings = settings, isLoading = false) }
             }
@@ -259,5 +263,10 @@ class SettingsViewModel @Inject constructor(
                 is Result.Loading -> { /* ignore */ }
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        settingsJob?.cancel()
     }
 }

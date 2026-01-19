@@ -51,6 +51,7 @@ class MemberViewModel @Inject constructor(
     val uiState: StateFlow<MemberListUiState> = _uiState.asStateFlow()
 
     private var membersJob: Job? = null
+    private var memberStatsJob: Job? = null
 
     companion object {
         private const val TAG = "MemberViewModel"
@@ -247,7 +248,9 @@ class MemberViewModel @Inject constructor(
     }
 
     private fun loadMemberStats(memberId: Long) {
-        viewModelScope.launch {
+        // Cancel previous stats job to prevent memory leak
+        memberStatsJob?.cancel()
+        memberStatsJob = viewModelScope.launch {
             // 모든 통계를 combine으로 동시에 수집
             combine(
                 scoreRepository.getTotalGamesByMemberId(memberId),
@@ -292,5 +295,6 @@ class MemberViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         membersJob?.cancel()
+        memberStatsJob?.cancel()
     }
 }

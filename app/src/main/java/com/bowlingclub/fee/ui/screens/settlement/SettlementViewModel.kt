@@ -119,6 +119,7 @@ class SettlementViewModel @Inject constructor(
 
     private var dataJob: Job? = null
     private var settlementMembersJob: Job? = null
+    private var settingsJob: Job? = null
 
     init {
         loadData()
@@ -126,7 +127,8 @@ class SettlementViewModel @Inject constructor(
     }
 
     private fun loadSettings() {
-        viewModelScope.launch {
+        settingsJob?.cancel()
+        settingsJob = viewModelScope.launch {
             settingsRepository.settings.collect { settings ->
                 _uiState.update { it.copy(gameFeePerGame = settings.gameFeePerGame) }
             }
@@ -931,5 +933,6 @@ class SettlementViewModel @Inject constructor(
         super.onCleared()
         dataJob?.cancel()
         settlementMembersJob?.cancel()
+        settingsJob?.cancel()
     }
 }
