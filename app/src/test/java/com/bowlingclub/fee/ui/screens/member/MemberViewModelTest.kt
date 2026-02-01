@@ -1,7 +1,15 @@
 package com.bowlingclub.fee.ui.screens.member
 
 import app.cash.turbine.test
-import com.bowlingclub.fee.data.repository.MemberRepository
+import com.bowlingclub.fee.data.repository.ScoreRepository
+import com.bowlingclub.fee.domain.usecase.member.GetAllMembersUseCase
+import com.bowlingclub.fee.domain.usecase.member.GetMembersByStatusUseCase
+import com.bowlingclub.fee.domain.usecase.member.GetMemberCountByStatusUseCase
+import com.bowlingclub.fee.domain.usecase.member.SearchMembersUseCase
+import com.bowlingclub.fee.domain.usecase.member.AddMemberUseCase
+import com.bowlingclub.fee.domain.usecase.member.UpdateMemberUseCase
+import com.bowlingclub.fee.domain.usecase.member.DeleteMemberUseCase
+import com.bowlingclub.fee.domain.usecase.member.GetMemberByIdUseCase
 import com.bowlingclub.fee.domain.model.Gender
 import com.bowlingclub.fee.domain.model.Member
 import com.bowlingclub.fee.domain.model.MemberStatus
@@ -26,7 +34,15 @@ import java.time.LocalDate
 @OptIn(ExperimentalCoroutinesApi::class)
 class MemberViewModelTest {
 
-    private lateinit var memberRepository: MemberRepository
+    private lateinit var getAllMembersUseCase: GetAllMembersUseCase
+    private lateinit var getMembersByStatusUseCase: GetMembersByStatusUseCase
+    private lateinit var getMemberCountByStatusUseCase: GetMemberCountByStatusUseCase
+    private lateinit var searchMembersUseCase: SearchMembersUseCase
+    private lateinit var addMemberUseCase: AddMemberUseCase
+    private lateinit var updateMemberUseCase: UpdateMemberUseCase
+    private lateinit var deleteMemberUseCase: DeleteMemberUseCase
+    private lateinit var getMemberByIdUseCase: GetMemberByIdUseCase
+    private lateinit var scoreRepository: ScoreRepository
     private lateinit var viewModel: MemberViewModel
     private val testDispatcher = StandardTestDispatcher()
 
@@ -57,12 +73,20 @@ class MemberViewModelTest {
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        memberRepository = mockk(relaxed = true)
+        getAllMembersUseCase = mockk(relaxed = true)
+        getMembersByStatusUseCase = mockk(relaxed = true)
+        getMemberCountByStatusUseCase = mockk(relaxed = true)
+        searchMembersUseCase = mockk(relaxed = true)
+        addMemberUseCase = mockk(relaxed = true)
+        updateMemberUseCase = mockk(relaxed = true)
+        deleteMemberUseCase = mockk(relaxed = true)
+        getMemberByIdUseCase = mockk(relaxed = true)
+        scoreRepository = mockk(relaxed = true)
 
         // Setup default mock behavior
-        every { memberRepository.getAllMembers() } returns flowOf(testMembers)
-        every { memberRepository.getMemberCountByStatus(MemberStatus.ACTIVE) } returns flowOf(1)
-        every { memberRepository.getMemberCountByStatus(MemberStatus.DORMANT) } returns flowOf(1)
+        every { getAllMembersUseCase() } returns flowOf(testMembers)
+        every { getMemberCountByStatusUseCase(MemberStatus.ACTIVE) } returns flowOf(1)
+        every { getMemberCountByStatusUseCase(MemberStatus.DORMANT) } returns flowOf(1)
     }
 
     @After
@@ -71,7 +95,17 @@ class MemberViewModelTest {
     }
 
     private fun createViewModel(): MemberViewModel {
-        return MemberViewModel(memberRepository)
+        return MemberViewModel(
+            getAllMembersUseCase = getAllMembersUseCase,
+            getMembersByStatusUseCase = getMembersByStatusUseCase,
+            getMemberCountByStatusUseCase = getMemberCountByStatusUseCase,
+            searchMembersUseCase = searchMembersUseCase,
+            addMemberUseCase = addMemberUseCase,
+            updateMemberUseCase = updateMemberUseCase,
+            deleteMemberUseCase = deleteMemberUseCase,
+            getMemberByIdUseCase = getMemberByIdUseCase,
+            scoreRepository = scoreRepository
+        )
     }
 
     @Test
@@ -97,7 +131,7 @@ class MemberViewModelTest {
 
     @Test
     fun `filterByStatus updates members`() = runTest {
-        every { memberRepository.getMembersByStatus(MemberStatus.ACTIVE) } returns flowOf(listOf(testMember))
+        every { getMembersByStatusUseCase(MemberStatus.ACTIVE) } returns flowOf(listOf(testMember))
 
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -123,7 +157,7 @@ class MemberViewModelTest {
 
     @Test
     fun `search with query filters members`() = runTest {
-        every { memberRepository.searchMembers("홍") } returns flowOf(listOf(testMember))
+        every { searchMembersUseCase("홍") } returns flowOf(listOf(testMember))
 
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -137,8 +171,8 @@ class MemberViewModelTest {
     }
 
     @Test
-    fun `addMember calls repository insert`() = runTest {
-        coEvery { memberRepository.insert(any()) } returns Result.Success(1L)
+    fun `addMember calls usecase`() = runTest {
+        coEvery { addMemberUseCase(any()) } returns Result.Success(1L)
 
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -146,12 +180,12 @@ class MemberViewModelTest {
         viewModel.addMember(testMember)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        coVerify { memberRepository.insert(testMember) }
+        coVerify { addMemberUseCase(testMember) }
     }
 
     @Test
-    fun `updateMember calls repository update`() = runTest {
-        coEvery { memberRepository.update(any()) } returns Result.Success(Unit)
+    fun `updateMember calls usecase`() = runTest {
+        coEvery { updateMemberUseCase(any()) } returns Result.Success(Unit)
 
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -159,12 +193,12 @@ class MemberViewModelTest {
         viewModel.updateMember(testMember)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        coVerify { memberRepository.update(testMember) }
+        coVerify { updateMemberUseCase(testMember) }
     }
 
     @Test
     fun `deleteMember success does not set error`() = runTest {
-        coEvery { memberRepository.delete(any()) } returns Result.Success(Unit)
+        coEvery { deleteMemberUseCase(any()) } returns Result.Success(Unit)
 
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -173,12 +207,12 @@ class MemberViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertNull(viewModel.uiState.value.errorMessage)
-        coVerify { memberRepository.delete(testMember) }
+        coVerify { deleteMemberUseCase(testMember.id) }
     }
 
     @Test
     fun `deleteMember failure sets error message`() = runTest {
-        coEvery { memberRepository.delete(any()) } returns Result.Error(RuntimeException("error"))
+        coEvery { deleteMemberUseCase(any()) } returns Result.Error(RuntimeException("삭제 오류"))
 
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -186,12 +220,12 @@ class MemberViewModelTest {
         viewModel.deleteMember(testMember)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals("삭제에 실패했습니다", viewModel.uiState.value.errorMessage)
+        assertEquals("삭제 오류", viewModel.uiState.value.errorMessage)
     }
 
     @Test
     fun `loadMemberById success updates selectedMember`() = runTest {
-        coEvery { memberRepository.getMemberById(1L) } returns Result.Success(testMember)
+        coEvery { getMemberByIdUseCase(1L) } returns Result.Success(testMember)
 
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -205,7 +239,7 @@ class MemberViewModelTest {
 
     @Test
     fun `loadMemberById failure sets error message`() = runTest {
-        coEvery { memberRepository.getMemberById(999L) } returns Result.Error(RuntimeException("not found"))
+        coEvery { getMemberByIdUseCase(999L) } returns Result.Error(RuntimeException("not found"))
 
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -214,12 +248,12 @@ class MemberViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertNull(viewModel.uiState.value.selectedMember)
-        assertEquals("회원 정보를 불러올 수 없습니다", viewModel.uiState.value.errorMessage)
+        assertEquals("not found", viewModel.uiState.value.errorMessage)
     }
 
     @Test
     fun `clearSelectedMember resets selectedMember and error`() = runTest {
-        coEvery { memberRepository.getMemberById(1L) } returns Result.Success(testMember)
+        coEvery { getMemberByIdUseCase(1L) } returns Result.Success(testMember)
 
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -235,7 +269,7 @@ class MemberViewModelTest {
 
     @Test
     fun `clearError resets error message`() = runTest {
-        coEvery { memberRepository.delete(any()) } returns Result.Error(RuntimeException("error"))
+        coEvery { deleteMemberUseCase(any()) } returns Result.Error(RuntimeException("error"))
 
         viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -246,15 +280,5 @@ class MemberViewModelTest {
         viewModel.clearError()
 
         assertNull(viewModel.uiState.value.errorMessage)
-    }
-
-    @Test
-    fun `getMemberById returns cached member from list`() = runTest {
-        viewModel = createViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        val member = viewModel.getMemberById(1L)
-
-        assertEquals(testMember, member)
     }
 }

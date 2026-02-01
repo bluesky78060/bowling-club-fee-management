@@ -1,6 +1,6 @@
 package com.bowlingclub.fee.domain.usecase.payment
 
-import com.bowlingclub.fee.data.repository.MemberRepository
+import com.bowlingclub.fee.domain.repository.MemberRepository
 import com.bowlingclub.fee.data.repository.PaymentRepository
 import com.bowlingclub.fee.domain.model.Member
 import kotlinx.coroutines.flow.Flow

@@ -6,11 +6,11 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 /**
- * 모든 회원 목록을 조회하는 UseCase
+ * 활성 회원 목록을 조회하는 UseCase
  */
-class GetAllMembersUseCase @Inject constructor(
+class GetActiveMembersUseCase @Inject constructor(
     private val memberRepository: MemberRepository
 ) {
     operator fun invoke(): Flow<List<Member>> =
-        memberRepository.getAllMembers()
+        memberRepository.getActiveMembers()
 }

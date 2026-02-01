@@ -7,7 +7,7 @@ import com.bowlingclub.fee.data.local.database.dao.MemberMeetingScoreSummary
 import com.bowlingclub.fee.data.ocr.HybridOcrRepository
 import com.bowlingclub.fee.data.repository.AccountRepository
 import com.bowlingclub.fee.data.repository.MeetingWithStats
-import com.bowlingclub.fee.data.repository.MemberRepository
+import com.bowlingclub.fee.domain.repository.MemberRepository
 import com.bowlingclub.fee.data.repository.ScoreRepository
 import com.bowlingclub.fee.data.repository.SettingsRepository
 import com.bowlingclub.fee.data.repository.SettlementRepository

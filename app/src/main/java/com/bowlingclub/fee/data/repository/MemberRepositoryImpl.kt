@@ -5,32 +5,39 @@ import com.bowlingclub.fee.data.local.database.entity.MemberEntity
 import com.bowlingclub.fee.domain.model.Member
 import com.bowlingclub.fee.domain.model.MemberStatus
 import com.bowlingclub.fee.domain.model.Result
+import com.bowlingclub.fee.domain.repository.MemberRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * MemberRepository 인터페이스의 구현체
+ *
+ * Room DAO를 사용하여 로컬 데이터베이스에 접근합니다.
+ */
 @Singleton
-class MemberRepository @Inject constructor(
+class MemberRepositoryImpl @Inject constructor(
     private val memberDao: MemberDao
-) {
-    fun getAllMembers(): Flow<List<Member>> =
+) : MemberRepository {
+
+    override fun getAllMembers(): Flow<List<Member>> =
         memberDao.getAllMembers()
             .map { entities -> entities.map { it.toDomain() } }
             .catch { emit(emptyList()) }
 
-    fun getActiveMembers(): Flow<List<Member>> =
+    override fun getActiveMembers(): Flow<List<Member>> =
         memberDao.getActiveMembers()
             .map { entities -> entities.map { it.toDomain() } }
             .catch { emit(emptyList()) }
 
-    fun getMembersByStatus(status: MemberStatus): Flow<List<Member>> =
+    override fun getMembersByStatus(status: MemberStatus): Flow<List<Member>> =
         memberDao.getMembersByStatus(status.toDbValue())
             .map { entities -> entities.map { it.toDomain() } }
             .catch { emit(emptyList()) }
 
-    fun searchMembers(query: String): Flow<List<Member>> {
+    override fun searchMembers(query: String): Flow<List<Member>> {
         // Room uses parameterized queries (prepared statements) which are SQL injection safe.
         // We only escape LIKE wildcards (%, _, \) to ensure literal matching, not for SQL injection prevention.
         val escapedQuery = escapeLikeWildcards(query)
@@ -38,6 +45,25 @@ class MemberRepository @Inject constructor(
             .map { entities -> entities.map { it.toDomain() } }
             .catch { emit(emptyList()) }
     }
+
+    override fun getMemberCountByStatus(status: MemberStatus): Flow<Int> =
+        memberDao.getMemberCountByStatus(status.toDbValue())
+            .catch { emit(0) }
+
+    override suspend fun getMemberById(id: Long): Result<Member?> =
+        Result.runCatching { memberDao.getMemberById(id)?.toDomain() }
+
+    override suspend fun insert(member: Member): Result<Long> =
+        Result.runCatching { memberDao.insert(MemberEntity.fromDomain(member)) }
+
+    override suspend fun update(member: Member): Result<Unit> =
+        Result.runCatching { memberDao.update(MemberEntity.fromDomain(member)) }
+
+    override suspend fun delete(member: Member): Result<Unit> =
+        Result.runCatching { memberDao.delete(MemberEntity.fromDomain(member)) }
+
+    override suspend fun deleteById(id: Long): Result<Unit> =
+        Result.runCatching { memberDao.deleteById(id) }
 
     companion object {
         /**
@@ -50,23 +76,4 @@ class MemberRepository @Inject constructor(
             .replace("%", "\\%")    // Escape LIKE wildcard
             .replace("_", "\\_")    // Escape LIKE single-char wildcard
     }
-
-    fun getMemberCountByStatus(status: MemberStatus): Flow<Int> =
-        memberDao.getMemberCountByStatus(status.toDbValue())
-            .catch { emit(0) }
-
-    suspend fun getMemberById(id: Long): Result<Member?> =
-        Result.runCatching { memberDao.getMemberById(id)?.toDomain() }
-
-    suspend fun insert(member: Member): Result<Long> =
-        Result.runCatching { memberDao.insert(MemberEntity.fromDomain(member)) }
-
-    suspend fun update(member: Member): Result<Unit> =
-        Result.runCatching { memberDao.update(MemberEntity.fromDomain(member)) }
-
-    suspend fun delete(member: Member): Result<Unit> =
-        Result.runCatching { memberDao.delete(MemberEntity.fromDomain(member)) }
-
-    suspend fun deleteById(id: Long): Result<Unit> =
-        Result.runCatching { memberDao.deleteById(id) }
 }

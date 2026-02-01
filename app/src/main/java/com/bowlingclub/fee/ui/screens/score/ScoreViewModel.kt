@@ -3,7 +3,7 @@ package com.bowlingclub.fee.ui.screens.score
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bowlingclub.fee.data.repository.MeetingWithStats
-import com.bowlingclub.fee.data.repository.MemberRepository
+import com.bowlingclub.fee.domain.repository.MemberRepository
 import com.bowlingclub.fee.data.repository.ScoreRepository
 import com.bowlingclub.fee.domain.model.Meeting
 import com.bowlingclub.fee.domain.model.Member

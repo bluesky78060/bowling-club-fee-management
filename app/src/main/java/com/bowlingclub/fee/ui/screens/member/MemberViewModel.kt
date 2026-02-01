@@ -3,11 +3,19 @@ package com.bowlingclub.fee.ui.screens.member
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.util.Log
-import com.bowlingclub.fee.data.repository.MemberRepository
+import com.bowlingclub.fee.domain.usecase.member.GetAllMembersUseCase
+import com.bowlingclub.fee.domain.usecase.member.GetMembersByStatusUseCase
+import com.bowlingclub.fee.domain.usecase.member.GetMemberCountByStatusUseCase
+import com.bowlingclub.fee.domain.usecase.member.SearchMembersUseCase
+import com.bowlingclub.fee.domain.usecase.member.AddMemberUseCase
+import com.bowlingclub.fee.domain.usecase.member.UpdateMemberUseCase
+import com.bowlingclub.fee.domain.usecase.member.DeleteMemberUseCase
+import com.bowlingclub.fee.domain.usecase.member.GetMemberByIdUseCase
 import com.bowlingclub.fee.data.repository.ScoreRepository
 import com.bowlingclub.fee.domain.model.Gender
 import com.bowlingclub.fee.domain.model.Member
 import com.bowlingclub.fee.domain.model.MemberStatus
+import com.bowlingclub.fee.domain.model.Result
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -43,7 +51,14 @@ data class MemberListUiState(
 
 @HiltViewModel
 class MemberViewModel @Inject constructor(
-    private val memberRepository: MemberRepository,
+    private val getAllMembersUseCase: GetAllMembersUseCase,
+    private val getMembersByStatusUseCase: GetMembersByStatusUseCase,
+    private val getMemberCountByStatusUseCase: GetMemberCountByStatusUseCase,
+    private val searchMembersUseCase: SearchMembersUseCase,
+    private val addMemberUseCase: AddMemberUseCase,
+    private val updateMemberUseCase: UpdateMemberUseCase,
+    private val deleteMemberUseCase: DeleteMemberUseCase,
+    private val getMemberByIdUseCase: GetMemberByIdUseCase,
     private val scoreRepository: ScoreRepository
 ) : ViewModel() {
 
@@ -67,7 +82,7 @@ class MemberViewModel @Inject constructor(
     private fun initializeMembers() {
         viewModelScope.launch {
             try {
-                val existingMembers = memberRepository.getAllMembers().first()
+                val existingMembers = getAllMembersUseCase().first()
                 if (existingMembers.isEmpty()) {
                     Log.d(TAG, "회원이 없습니다. 라온제나 클럽 회원 명부를 추가합니다.")
                     insertInitialMembers()
@@ -117,11 +132,10 @@ class MemberViewModel @Inject constructor(
         )
 
         initialMembers.forEach { member ->
-            try {
-                memberRepository.insert(member)
-                Log.d(TAG, "회원 추가 완료: ${member.name}")
-            } catch (e: Exception) {
-                Log.e(TAG, "회원 추가 실패: ${member.name}", e)
+            when (val result = addMemberUseCase(member)) {
+                is Result.Success -> Log.d(TAG, "회원 추가 완료: ${member.name}")
+                is Result.Error -> Log.e(TAG, "회원 추가 실패: ${member.name}", result.exception)
+                is Result.Loading -> { /* 로딩 중 */ }
             }
         }
         Log.d(TAG, "라온제나 클럽 회원 ${initialMembers.size}명 추가 완료")
@@ -133,9 +147,9 @@ class MemberViewModel @Inject constructor(
 
         membersJob = viewModelScope.launch {
             combine(
-                memberRepository.getAllMembers(),
-                memberRepository.getMemberCountByStatus(MemberStatus.ACTIVE),
-                memberRepository.getMemberCountByStatus(MemberStatus.DORMANT)
+                getAllMembersUseCase(),
+                getMemberCountByStatusUseCase(MemberStatus.ACTIVE),
+                getMemberCountByStatusUseCase(MemberStatus.DORMANT)
             ) { members, activeCount, dormantCount ->
                 MemberListUiState(
                     members = members,
@@ -154,7 +168,7 @@ class MemberViewModel @Inject constructor(
         membersJob?.cancel()
 
         membersJob = viewModelScope.launch {
-            memberRepository.getAllMembers().collect { members ->
+            getAllMembersUseCase().collect { members ->
                 _uiState.update { currentState ->
                     currentState.copy(
                         members = members,
@@ -170,7 +184,7 @@ class MemberViewModel @Inject constructor(
         membersJob?.cancel()
 
         membersJob = viewModelScope.launch {
-            memberRepository.getMembersByStatus(status).collect { members ->
+            getMembersByStatusUseCase(status).collect { members ->
                 _uiState.update { currentState ->
                     currentState.copy(
                         members = members,
@@ -190,7 +204,7 @@ class MemberViewModel @Inject constructor(
         membersJob?.cancel()
 
         membersJob = viewModelScope.launch {
-            memberRepository.searchMembers(query).collect { members ->
+            searchMembersUseCase(query).collect { members ->
                 _uiState.update { currentState ->
                     currentState.copy(
                         members = members,
@@ -203,21 +217,36 @@ class MemberViewModel @Inject constructor(
 
     fun addMember(member: Member) {
         viewModelScope.launch {
-            memberRepository.insert(member)
+            when (val result = addMemberUseCase(member)) {
+                is Result.Success -> { /* 성공 - Flow가 자동 업데이트 */ }
+                is Result.Error -> {
+                    _uiState.update { it.copy(errorMessage = result.exception.message ?: "회원 추가에 실패했습니다") }
+                }
+                is Result.Loading -> { /* 로딩 중 */ }
+            }
         }
     }
 
     fun updateMember(member: Member) {
         viewModelScope.launch {
-            memberRepository.update(member)
+            when (val result = updateMemberUseCase(member)) {
+                is Result.Success -> { /* 성공 - Flow가 자동 업데이트 */ }
+                is Result.Error -> {
+                    _uiState.update { it.copy(errorMessage = result.exception.message ?: "회원 수정에 실패했습니다") }
+                }
+                is Result.Loading -> { /* 로딩 중 */ }
+            }
         }
     }
 
     fun deleteMember(member: Member) {
         viewModelScope.launch {
-            val result = memberRepository.delete(member)
-            if (result.isError) {
-                _uiState.update { it.copy(errorMessage = "삭제에 실패했습니다") }
+            when (val result = deleteMemberUseCase(member.id)) {
+                is Result.Success -> { /* 성공 - Flow가 자동 업데이트 */ }
+                is Result.Error -> {
+                    _uiState.update { it.copy(errorMessage = result.exception.message ?: "삭제에 실패했습니다") }
+                }
+                is Result.Loading -> { /* 로딩 중 */ }
             }
         }
     }
@@ -233,16 +262,15 @@ class MemberViewModel @Inject constructor(
 
         // Load from database
         viewModelScope.launch {
-            val result = memberRepository.getMemberById(memberId)
-            _uiState.update { currentState ->
-                if (result.isSuccess) {
-                    currentState.copy(selectedMember = result.getOrNull(), errorMessage = null)
-                } else {
-                    currentState.copy(selectedMember = null, errorMessage = "회원 정보를 불러올 수 없습니다")
+            when (val result = getMemberByIdUseCase(memberId)) {
+                is Result.Success -> {
+                    _uiState.update { it.copy(selectedMember = result.data, errorMessage = null) }
+                    loadMemberStats(memberId)
                 }
-            }
-            if (result.isSuccess) {
-                loadMemberStats(memberId)
+                is Result.Error -> {
+                    _uiState.update { it.copy(selectedMember = null, errorMessage = result.exception.message ?: "회원 정보를 불러올 수 없습니다") }
+                }
+                is Result.Loading -> { /* 로딩 중 */ }
             }
         }
     }

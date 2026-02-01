@@ -20,7 +20,7 @@ import java.time.LocalDate
 class MemberRepositoryTest {
 
     private lateinit var memberDao: MemberDao
-    private lateinit var repository: MemberRepository
+    private lateinit var repository: MemberRepositoryImpl
 
     private val testMemberEntity = MemberEntity(
         id = 1L,
@@ -51,7 +51,7 @@ class MemberRepositoryTest {
     @Before
     fun setup() {
         memberDao = mockk()
-        repository = MemberRepository(memberDao)
+        repository = MemberRepositoryImpl(memberDao)
     }
 
     @Test

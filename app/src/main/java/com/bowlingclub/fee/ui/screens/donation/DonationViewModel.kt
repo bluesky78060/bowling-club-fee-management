@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bowlingclub.fee.data.repository.AccountRepository
 import com.bowlingclub.fee.data.repository.DonationRepository
-import com.bowlingclub.fee.data.repository.MemberRepository
+import com.bowlingclub.fee.domain.repository.MemberRepository
 import com.bowlingclub.fee.domain.model.Account
 import com.bowlingclub.fee.domain.model.AccountType
 import com.bowlingclub.fee.domain.model.Donation

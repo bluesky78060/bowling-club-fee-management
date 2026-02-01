@@ -1,6 +1,7 @@
 package com.bowlingclub.fee.ui.screens.settings
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Storage
@@ -77,9 +79,10 @@ import com.bowlingclub.fee.ui.theme.Gray500
 import com.bowlingclub.fee.ui.theme.Gray600
 import com.bowlingclub.fee.ui.theme.Primary
 import com.bowlingclub.fee.ui.theme.Warning
+import android.os.Handler
+import android.os.Looper
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import kotlin.system.exitProcess
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -192,14 +195,8 @@ fun SettingsScreen(
                     onClick = {
                         pendingRestoreUri?.let { uri ->
                             viewModel.importDatabase(uri) {
-                                // 앱 재시작
-                                (context as? Activity)?.let { activity ->
-                                    val intent = activity.packageManager.getLaunchIntentForPackage(activity.packageName)
-                                    intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    activity.startActivity(intent)
-                                    activity.finish()
-                                    exitProcess(0)
-                                }
+                                // 앱 재시작 (DB 복원 후 새 연결을 위해 필요)
+                                restartApp(context)
                             }
                         }
                     }
@@ -362,6 +359,16 @@ fun SettingsScreen(
                         icon = Icons.Default.Info,
                         label = "버전",
                         value = BuildConfig.VERSION_NAME
+                    )
+                    HorizontalDivider(color = Gray200, modifier = Modifier.padding(vertical = 4.dp))
+                    SettingsClickableItem(
+                        icon = Icons.AutoMirrored.Filled.Help,
+                        label = "사용자 가이드",
+                        description = "앱 사용법 및 기능 안내",
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://bluesky78060.github.io/bowling-club-fee-management/user-guide.html"))
+                            context.startActivity(intent)
+                        }
                     )
                     HorizontalDivider(color = Gray200, modifier = Modifier.padding(vertical = 4.dp))
                     SettingsInfoItem(
@@ -614,5 +621,32 @@ private fun SettingsInfoItem(
             fontWeight = FontWeight.Medium,
             color = Gray500
         )
+    }
+}
+
+/**
+ * 앱을 안전하게 재시작합니다.
+ * DB 복원 후 새로운 데이터베이스 연결을 위해 사용됩니다.
+ */
+private fun restartApp(context: Context) {
+    (context as? Activity)?.let { activity ->
+        val packageManager = activity.packageManager
+        val packageName = activity.packageName
+        val intent = packageManager.getLaunchIntentForPackage(packageName)
+
+        intent?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        // 현재 Activity 종료 후 약간의 딜레이를 두고 앱 재시작
+        activity.finishAffinity()
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            context.startActivity(intent)
+            // 프로세스 종료 (새로운 프로세스에서 앱 시작을 위해)
+            android.os.Process.killProcess(android.os.Process.myPid())
+        }, 100)
     }
 }

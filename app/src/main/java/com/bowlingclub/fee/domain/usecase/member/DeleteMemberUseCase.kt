@@ -1,6 +1,6 @@
 package com.bowlingclub.fee.domain.usecase.member
 
-import com.bowlingclub.fee.data.repository.MemberRepository
+import com.bowlingclub.fee.domain.repository.MemberRepository
 import com.bowlingclub.fee.domain.model.Result
 import javax.inject.Inject
 
